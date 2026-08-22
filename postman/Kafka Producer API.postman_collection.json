@@ -1,0 +1,242 @@
+{
+	"info": {
+		"_postman_id": "kafka-producer-api",
+		"name": "Kafka Producer & Consumer API",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "Health Check",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:8081/api/kafka/health",
+					"protocol": "http",
+					"host": ["localhost"],
+					"port": "8081",
+					"path": ["api", "kafka", "health"]
+				},
+				"description": "Check if the Spring Boot app is running"
+			},
+			"response": []
+		},
+		{
+			"name": "Send Message",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"topic\": \"rebalance-test\",\n    \"key\": \"my-key\",\n    \"value\": \"hello avro + gzip\"\n}"
+				},
+				"url": {
+					"raw": "http://localhost:8081/api/kafka/send",
+					"protocol": "http",
+					"host": ["localhost"],
+					"port": "8081",
+					"path": ["api", "kafka", "send"]
+				},
+				"description": "Send a message with Avro serialization + GZIP compression"
+			},
+			"response": []
+		},
+		{
+			"name": "Send Big Message",
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"topic\": \"rebalance-test\",\n    \"key\": \"big-msg\",\n    \"value\": \"Lorem ipsum dolor sit amet, consectetur adipiscing elit. \".repeat(100)\n}"
+				},
+				"url": {
+					"raw": "http://localhost:8081/api/kafka/send",
+					"protocol": "http",
+					"host": ["localhost"],
+					"port": "8081",
+					"path": ["api", "kafka", "send"]
+				},
+				"description": "Send a larger message to see better GZIP compression ratio"
+			},
+			"response": []
+		},
+		{
+			"name": "Consume Messages (Manual Poll)",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:8081/api/kafka/consume?topic=rebalance-test&timeout=5000",
+					"protocol": "http",
+					"host": ["localhost"],
+					"port": "8081",
+					"path": ["api", "kafka", "consume"],
+					"query": [
+						{
+							"key": "topic",
+							"value": "rebalance-test"
+						},
+						{
+							"key": "timeout",
+							"value": "5000"
+						}
+					]
+				},
+				"description": "One-shot consume — polls messages and returns them. For continuous consumption use consumer/start instead."
+			},
+			"response": []
+		},
+		{
+			"name": "Generate Payload (Single Size)",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:8081/api/kafka/generate-payload?sizeKB=100",
+					"protocol": "http",
+					"host": ["localhost"],
+					"port": "8081",
+					"path": ["api", "kafka", "generate-payload"],
+					"query": [
+						{
+							"key": "sizeKB",
+							"value": "100"
+						}
+					]
+				},
+				"description": "Generate a payload of N KB and send to Kafka. Check Spring Boot logs for [AVRO-SERIALIZE] to see compression ratio."
+			},
+			"response": []
+		},
+		{
+			"name": "Generate Payloads (Multiple Sizes)",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:8081/api/kafka/generate-payloads?sizes=1,10,50,100,500,1000",
+					"protocol": "http",
+					"host": ["localhost"],
+					"port": "8081",
+					"path": ["api", "kafka", "generate-payloads"],
+					"query": [
+						{
+							"key": "sizes",
+							"value": "1,10,50,100,500,1000"
+						}
+					]
+				},
+				"description": "Send multiple payloads of different sizes. Check logs for [AVRO-SERIALIZE] avro=X gzip=Y ratio=Z% for each size."
+			},
+			"response": []
+		},
+		{
+			"name": "Consumer Groups",
+			"item": [
+				{
+					"name": "List Active Groups",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:8081/api/kafka/consumer/groups",
+							"protocol": "http",
+							"host": ["localhost"],
+							"port": "8081",
+							"path": ["api", "kafka", "consumer", "groups"]
+						},
+						"description": "List all active consumer groups with their running status and message counts"
+					},
+					"response": []
+				},
+				{
+					"name": "Start Consumer Group",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:8081/api/kafka/consumer/start?groupId=group-1&topic=rebalance-test",
+							"protocol": "http",
+							"host": ["localhost"],
+							"port": "8081",
+							"path": ["api", "kafka", "consumer", "start"],
+							"query": [
+								{
+									"key": "groupId",
+									"value": "group-1",
+									"description": "Consumer group ID"
+								},
+								{
+									"key": "topic",
+									"value": "rebalance-test",
+									"description": "Topic to subscribe to"
+								}
+							]
+						},
+						"description": "Start a continuously-running consumer group on a topic. Each call starts one consumer instance in the group. Call multiple times to add more consumers.\n\nWatch Spring Boot logs for [REBALANCE] to see partition assignment."
+					},
+					"response": []
+				},
+				{
+					"name": "Stop Consumer Group",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:8081/api/kafka/consumer/stop?groupId=group-1",
+							"protocol": "http",
+							"host": ["localhost"],
+							"port": "8081",
+							"path": ["api", "kafka", "consumer", "stop"],
+							"query": [
+								{
+									"key": "groupId",
+									"value": "group-1"
+								}
+							]
+						},
+						"description": "Stop all consumers in a group and close the consumer threads"
+					},
+					"response": []
+				},
+				{
+					"name": "Start Group 2",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:8081/api/kafka/consumer/start?groupId=group-2&topic=rebalance-test",
+							"protocol": "http",
+							"host": ["localhost"],
+							"port": "8081",
+							"path": ["api", "kafka", "consumer", "start"],
+							"query": [
+								{
+									"key": "groupId",
+									"value": "group-2"
+								},
+								{
+									"key": "topic",
+									"value": "rebalance-test"
+								}
+							]
+						},
+						"description": "Start a second consumer group on the same topic (independent from group-1)"
+					},
+					"response": []
+				}
+			]
+		}
+	]
+}
