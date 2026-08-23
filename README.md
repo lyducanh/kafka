@@ -1,1 +1,2 @@
 - view kafka partition desribe
+- setup and scaling msk aws, https://oneuptime.com/blog/post/2026-02-12-set-up-amazon-msk/view

@@ -20,4 +20,80 @@ Thumbs.db
 
 # Kafka data (local)
 data/
+logs/# ==========================================
+# Java & Build Tools (Maven / Gradle)
+# ==========================================
+target/
+**/target/
+*.class
+*.jar
+*.war
+*.ear
+*.zip
+*.tar.gz
+*.rar
+
+# Maven wrapper
+.mvn/
+mvnw
+mvnw.cmd
+
+# Gradle
+.gradle/
+build/
+**/build/
+
+# ==========================================
+# IDE & Code Editors
+# ==========================================
+.idea/
+**/.idea/
+*.iml
+*.ipr
+*.iws
+.vscode/
+**/.vscode/
+.classpath
+.project
+.settings/
+*.swp
+*.swo
+
+# ==========================================
+# Kafka & Runtime Data
+# ==========================================
+data/
+**/data/
 logs/
+**/logs/
+*.log
+*.pid
+*.seed
+*.pid.lock
+
+# ==========================================
+# Python
+# ==========================================
+__pycache__/
+*.py[cod]
+*.pyc
+venv/
+.venv/
+env/
+.env/
+*.egg-info/
+dist/
+.pytest_cache/
+
+# ==========================================
+# OS & Environment Files
+# ==========================================
+.DS_Store
+.DS_Store?
+._*
+Thumbs.db
+ehthumbs.db
+desktop.ini
+.env
+.env.local
+.env.*.local
