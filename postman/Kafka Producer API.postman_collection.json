@@ -1,0 +1,315 @@
+{
+	"info": {
+		"_postman_id": "kafka-api-collection",
+		"name": "Kafka Spring Boot API",
+		"description": "Complete Postman Collection covering all endpoints for Kafka Producer, Consumer Management, and Transactions.",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"variable": [
+		{
+			"key": "baseUrl",
+			"value": "http://localhost:8081",
+			"type": "string"
+		}
+	],
+	"item": [
+		{
+			"name": "System",
+			"item": [
+				{
+					"name": "Health Check",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/kafka/health",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "kafka", "health"]
+						},
+						"description": "Check if the Spring Boot Kafka application is UP and running."
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Producer APIs",
+			"item": [
+				{
+					"name": "Send Message",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"topic\": \"rebalance-test\",\n    \"key\": \"order-101\",\n    \"value\": \"Payment completed for order #101\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/kafka/send",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "kafka", "send"]
+						},
+						"description": "Publishes a message to a Kafka topic with optional key and value."
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Consumer Management APIs",
+			"item": [
+				{
+					"name": "List Active Consumer Groups",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/kafka/consumer/groups",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "kafka", "consumer", "groups"]
+						},
+						"description": "Lists all active dynamic consumer groups along with their status and message counts."
+					},
+					"response": []
+				},
+				{
+					"name": "Start Consumer Group",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/kafka/consumer/start?groupId=group-1&topic=rebalance-test",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "kafka", "consumer", "start"],
+							"query": [
+								{
+									"key": "groupId",
+									"value": "group-1",
+									"description": "Consumer group ID"
+								},
+								{
+									"key": "topic",
+									"value": "rebalance-test",
+									"description": "Topic to subscribe to"
+								}
+							]
+						},
+						"description": "Starts a active consumer instance subscribed to the given topic. Call multiple times to add workers to the same group."
+					},
+					"response": []
+				},
+				{
+					"name": "Stop Consumer Group",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/kafka/consumer/stop?groupId=group-1",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "kafka", "consumer", "stop"],
+							"query": [
+								{
+									"key": "groupId",
+									"value": "group-1",
+									"description": "Consumer group ID to stop"
+								}
+							]
+						},
+						"description": "Stops all consumer threads running under the specified consumer group."
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Transactions APIs",
+			"item": [
+				{
+					"name": "Commit Multi-Topic Transaction",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"topic1\": \"orders-topic\",\n    \"key1\": \"order-key-001\",\n    \"val1\": \"Order Created #001\",\n    \"topic2\": \"audit-log-topic\",\n    \"key2\": \"audit-key-001\",\n    \"val2\": \"Audit Log for Order #001\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/kafka/tx/commit-multi-topic",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "kafka", "tx", "commit-multi-topic"]
+						},
+						"description": "Sends messages to multiple topics within a single Kafka transaction and commits it."
+					},
+					"response": []
+				},
+				{
+					"name": "Commit Multi-Topic Transaction (Async)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"topic1\": \"orders-topic\",\n    \"key1\": \"async-order-key-001\",\n    \"val1\": \"Async Order Created #001\",\n    \"topic2\": \"audit-log-topic\",\n    \"key2\": \"async-audit-key-001\",\n    \"val2\": \"Async Audit Log #001\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/kafka/tx/commit-multi-topic-async",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "kafka", "tx", "commit-multi-topic-async"]
+						},
+						"description": "Asynchronously sends messages to multiple topics in a single transaction and commits."
+					},
+					"response": []
+				},
+				{
+					"name": "Abort Multi-Topic Transaction",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"topic1\": \"orders-topic\",\n    \"key1\": \"abort-order-key\",\n    \"val1\": \"Aborted Order Data\",\n    \"topic2\": \"audit-log-topic\",\n    \"key2\": \"abort-audit-key\",\n    \"val2\": \"Aborted Audit Data\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/kafka/tx/abort-multi-topic",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "kafka", "tx", "abort-multi-topic"]
+						},
+						"description": "Starts a multi-topic transaction and explicitly aborts/rolls back the transaction. Read-committed consumers will not receive these messages."
+					},
+					"response": []
+				},
+				{
+					"name": "Start Transactional Consumer",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/kafka/tx/consumer/start?groupId=tx-group-1&topics=orders-topic,audit-log-topic&isolationLevel=read_committed",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "kafka", "tx", "consumer", "start"],
+							"query": [
+								{
+									"key": "groupId",
+									"value": "tx-group-1",
+									"description": "Consumer group ID"
+								},
+								{
+									"key": "topics",
+									"value": "orders-topic,audit-log-topic",
+									"description": "Comma-separated list of topics"
+								},
+								{
+									"key": "isolationLevel",
+									"value": "read_committed",
+									"description": "Isolation level: read_committed or read_uncommitted"
+								}
+							]
+						},
+						"description": "Starts a consumer configured with a specific isolation level (e.g. read_committed vs read_uncommitted) listening to multiple transactional topics."
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Kafka Streams APIs",
+			"item": [
+				{
+					"name": "Publish Text to Stream",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"text\": \"Kafka streams processing real time text streams! Kafka streams is fast and powerful.\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/kafka/streams/word-count/publish",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"kafka",
+								"streams",
+								"word-count",
+								"publish"
+							]
+						},
+						"description": "Publishes a text sentence to input topic 'text-input-topic' for real-time word count stream processing."
+					},
+					"response": []
+				},
+				{
+					"name": "Get All Word Counts (Interactive State Store)",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/kafka/streams/word-count/stats",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"kafka",
+								"streams",
+								"word-count",
+								"stats"
+							]
+						},
+						"description": "Interactively queries all aggregated word counts directly from the local RocksDB state store (word-count-total-store)."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Word Count for Key",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/kafka/streams/word-count/kafka",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"kafka",
+								"streams",
+								"word-count",
+								"kafka"
+							]
+						},
+						"description": "Interactively queries the count of a specific word from the state store."
+					},
+					"response": []
+				}
+			]
+		}
+	]
+}

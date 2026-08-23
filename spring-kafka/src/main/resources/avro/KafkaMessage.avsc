@@ -1,0 +1,14 @@
+{
+  "type": "record",
+  "name": "KafkaMessage",
+  "namespace": "com.example.kafka.model",
+  "fields": [
+    {"name": "id",        "type": "string"},
+    {"name": "topic",     "type": "string"},
+    {"name": "key",       "type": ["null", "string"], "default": null},
+    {"name": "value",     "type": "string"},
+    {"name": "partition", "type": "int",    "default": 0},
+    {"name": "offset",    "type": "long",   "default": 0},
+    {"name": "timestamp", "type": "long",   "default": 0}
+  ]
+}
