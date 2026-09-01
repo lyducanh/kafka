@@ -31,10 +31,18 @@ public class KafkaConsumerService {
 
     // Keep for backward compatibility
     public void startConsumer(String groupId, String topic) {
-        addConsumer(groupId, topic);
+        addConsumer(groupId, topic, "read_uncommitted");
+    }
+
+    public void startConsumer(String groupId, List<String> topics, String isolationLevel) {
+        topics.forEach(topic -> addConsumer(groupId, topic, isolationLevel));
     }
 
     public String addConsumer(String groupId, String topic) {
+        return addConsumer(groupId, topic, "read_uncommitted");
+    }
+
+    public String addConsumer(String groupId, String topic, String isolationLevel) {
         String consumerId = groupId + "-" + UUID.randomUUID().toString().substring(0, 6);
 
         Properties props = new Properties();
@@ -45,6 +53,7 @@ public class KafkaConsumerService {
                 "com.example.kafka.serializer.AvroKafkaDeserializer");
         props.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
         props.put(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, true);
+        props.put(ConsumerConfig.ISOLATION_LEVEL_CONFIG, isolationLevel);
 
         KafkaConsumer<String, Message> consumer = new KafkaConsumer<>(props);
         consumers.put(consumerId, consumer);

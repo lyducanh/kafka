@@ -39,13 +39,7 @@ public class KafkaStreamingController {
         }
 
         try {
-            var sendResult = kafkaTemplate.executeInTransaction(kt -> {
-                try {
-                    return kt.send(WordCountStreamTopology.TEXT_INPUT_TOPIC, text).get();
-                } catch (Exception e) {
-                    throw new RuntimeException(e);
-                }
-            });
+            var sendResult = kafkaTemplate.send(WordCountStreamTopology.TEXT_INPUT_TOPIC, text).get();
 
             log.info("[STREAMS-API] Published text to topic={} partition={} offset={}",
                     sendResult.getRecordMetadata().topic(),
