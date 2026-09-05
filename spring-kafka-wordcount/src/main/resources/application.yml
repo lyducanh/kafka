@@ -1,0 +1,42 @@
+spring:
+  application:
+    name: spring-kafka-wordcount
+
+  kafka:
+    bootstrap-servers: localhost:9092,localhost:9093,localhost:9094
+    consumer:
+      group-id: wordcount-consumer-group
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.LongDeserializer
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+      acks: all
+      retries: 3
+    streams:
+      application-id: spring-wordcount-streams
+      bootstrap-servers: localhost:9092,localhost:9093,localhost:9094
+      properties:
+        default.key.serde: org.apache.kafka.common.serialization.Serdes$StringSerde
+        default.value.serde: org.apache.kafka.common.serialization.Serdes$StringSerde
+        state.dir: ./data/kafka-streams/wordcount
+        commit.interval.ms: 1000
+
+server:
+  port: 8084
+
+app:
+  kafka:
+    topics:
+      input: wordcount-input
+      output: wordcount-output
+    partitions: 3
+    replication-factor: 3
+    stop-word: the
+
+logging:
+  level:
+    root: INFO
+    com.example.wordcount: INFO
+    org.apache.kafka: WARN

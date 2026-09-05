@@ -1,0 +1,134 @@
+{
+	"info": {
+		"_postman_id": "spring-kafka-wordcount-api",
+		"name": "Spring Kafka Streams WordCount API",
+		"description": "Postman collection for testing the Spring Boot Kafka Streams WordCount application (text tokenization, stop-word filtering, stateful KTable aggregation, Interactive RocksDB Queries).",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"variable": [
+		{
+			"key": "baseUrl",
+			"value": "http://localhost:8084",
+			"type": "string"
+		}
+	],
+	"item": [
+		{
+			"name": "WordCount Pipeline Control",
+			"item": [
+				{
+					"name": "Get Application Status",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/wordcount/status",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "wordcount", "status"]
+						},
+						"description": "Checks the Kafka Streams state, total distinct words counted, and recent updates count."
+					},
+					"response": []
+				},
+				{
+					"name": "Publish Sample Sentences",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/wordcount/sample",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "wordcount", "sample"]
+						},
+						"description": "Publishes 4 sample sentences to 'wordcount-input' demonstrating word counting and stop-word ('the') filtering."
+					},
+					"response": []
+				},
+				{
+					"name": "Publish Custom Text",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"text\": \"Kafka Streams is fast, scalable, and simple. The streaming engine makes Kafka fun!\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/wordcount/publish",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "wordcount", "publish"]
+						},
+						"description": "Publishes custom sentences to 'wordcount-input' topic."
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Live Counts & Interactive Queries",
+			"item": [
+				{
+					"name": "Get Live Word Counts (Listener)",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/wordcount/counts",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "wordcount", "counts"]
+						},
+						"description": "Retrieves the live map of distinct words and their counts consumed by the Spring KafkaListener from 'wordcount-output'."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Recent Updates",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/wordcount/recent",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "wordcount", "recent"]
+						},
+						"description": "Returns the history of the most recent word count update events."
+					},
+					"response": []
+				},
+				{
+					"name": "Query All Words from RocksDB",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/wordcount/store",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "wordcount", "store"]
+						},
+						"description": "Directly queries the local RocksDB KTable state store ('word-count-store') using Kafka Streams Interactive Queries API."
+					},
+					"response": []
+				},
+				{
+					"name": "Query Specific Word from RocksDB",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/wordcount/store/kafka",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "wordcount", "store", "kafka"]
+						},
+						"description": "Queries the exact count of a specific word (e.g. 'kafka') from the local RocksDB state store."
+					},
+					"response": []
+				}
+			]
+		}
+	]
+}
