@@ -1,0 +1,46 @@
+spring:
+  application:
+    name: spring-kafka-stockstats
+
+  kafka:
+    bootstrap-servers: localhost:9092,localhost:9093,localhost:9094
+    consumer:
+      group-id: stockstats-consumer-group
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      properties:
+        spring.json.trusted.packages: "*"
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+      acks: all
+      retries: 3
+    streams:
+      application-id: spring-stockstat-streams
+      bootstrap-servers: localhost:9092,localhost:9093,localhost:9094
+      properties:
+        default.key.serde: org.apache.kafka.common.serialization.Serdes$StringSerde
+        default.value.serde: org.apache.kafka.common.serialization.Serdes$StringSerde
+        state.dir: ./data/kafka-streams
+        commit.interval.ms: 1000
+
+server:
+  port: 8082
+
+app:
+  kafka:
+    topics:
+      stocks: stocks
+      stockstats-output: stockstats-output
+    partitions: 3
+    replication-factor: 3
+  generator:
+    enabled: false
+    interval-ms: 200
+
+logging:
+  level:
+    root: INFO
+    com.example.stockstats: INFO
+    org.apache.kafka: WARN
