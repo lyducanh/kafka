@@ -1,0 +1,236 @@
+{
+	"info": {
+		"_postman_id": "spring-kafka-clickstream-enrich-api",
+		"name": "Spring Kafka Streams Clickstream Enrichment API",
+		"description": "Postman collection for testing the Spring Boot Kafka Streams Clickstream Enrichment application (Stream-Table join, Stream-Stream join, Interactive RocksDB Queries, Mock Generator, Sample Scenario).",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"variable": [
+		{
+			"key": "baseUrl",
+			"value": "http://localhost:8083",
+			"type": "string"
+		}
+	],
+	"item": [
+		{
+			"name": "Clickstream Control & Status",
+			"item": [
+				{
+					"name": "Get Application Status",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/clickstream/status",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "clickstream", "status"]
+						},
+						"description": "Checks the Kafka Streams state, background simulator status, and count of recent enriched activities received."
+					},
+					"response": []
+				},
+				{
+					"name": "Trigger Sample Scenario (Gwen Shapira Data)",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/clickstream/sample",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "clickstream", "sample"]
+						},
+						"description": "Executes the exact demo scenario from Gwen Shapira's GenerateData class (2 user profiles, profile update, searches, page views, and an anonymous view)."
+					},
+					"response": []
+				},
+				{
+					"name": "Toggle Background Simulator",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/clickstream/generator/toggle",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "clickstream", "generator", "toggle"]
+						},
+						"description": "Toggles continuous background clickstream traffic generation."
+					},
+					"response": []
+				},
+				{
+					"name": "Start Background Simulator",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/clickstream/generator/start",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "clickstream", "generator", "start"]
+						},
+						"description": "Starts continuous background traffic generation."
+					},
+					"response": []
+				},
+				{
+					"name": "Stop Background Simulator",
+					"request": {
+						"method": "POST",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/clickstream/generator/stop",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "clickstream", "generator", "stop"]
+						},
+						"description": "Stops continuous background traffic generation."
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Ingest Custom Events",
+			"item": [
+				{
+					"name": "Publish User Profile",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"userId\": 1,\n  \"userName\": \"Matthias\",\n  \"zipcode\": \"94301\",\n  \"interests\": [\"Surfing\", \"Hiking\"]\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/clickstream/profile",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "clickstream", "profile"]
+						},
+						"description": "Produces a UserProfile event to 'clicks.user.profile' (consumed by KTable)."
+					},
+					"response": []
+				},
+				{
+					"name": "Publish Search Query",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"userId\": 1,\n  \"searchTerms\": \"retro wetsuit\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/clickstream/search",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "clickstream", "search"]
+						},
+						"description": "Produces a Search event to 'clicks.search' topic."
+					},
+					"response": []
+				},
+				{
+					"name": "Publish Page View",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"userId\": 1,\n  \"page\": \"collections/mens-wetsuits/products/w3-worlds-warmest-wetsuit\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/clickstream/pageview",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "clickstream", "pageview"]
+						},
+						"description": "Produces a PageView event to 'clicks.pages.views' topic. Triggers Stream-Table join with user profile and windowed Stream-Stream join with search."
+					},
+					"response": []
+				},
+				{
+					"name": "Publish Anonymous Page View",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"userId\": -1,\n  \"page\": \"product/osprey-atmos-65-ag-pack\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/clickstream/pageview",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "clickstream", "pageview"]
+						},
+						"description": "Produces a PageView for an unknown/anonymous user (userId = -1)."
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Enriched Results & Interactive Queries",
+			"item": [
+				{
+					"name": "Get Recent Enriched Activities",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/clickstream/activities",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "clickstream", "activities"]
+						},
+						"description": "Retrieves the recent enriched activity records consumed by the Spring KafkaListener from 'clicks.user.activity'."
+					},
+					"response": []
+				},
+				{
+					"name": "Query All Profiles from RocksDB",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/clickstream/store/profiles",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "clickstream", "store", "profiles"]
+						},
+						"description": "Directly queries the local RocksDB KTable state store ('user-profile-store') using Kafka Streams Interactive Queries API."
+					},
+					"response": []
+				},
+				{
+					"name": "Query Specific Profile from RocksDB",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/clickstream/store/profiles/1",
+							"host": ["{{baseUrl}}"],
+							"path": ["api", "clickstream", "store", "profiles", "1"]
+						},
+						"description": "Queries a specific user's current profile from the local RocksDB state store by user ID."
+					},
+					"response": []
+				}
+			]
+		}
+	]
+}

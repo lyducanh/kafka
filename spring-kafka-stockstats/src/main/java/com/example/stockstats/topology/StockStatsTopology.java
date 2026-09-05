@@ -53,33 +53,33 @@ public class StockStatsTopology {
                 .advanceBy(Duration.ofMillis(advanceSizeMs));
 
         // 3. Group by stock ticker and aggregate trade statistics
-        KStream<String, TradeStats> statsStream = trades
-                .groupByKey(Grouped.with(Serdes.String(), tradeSerde))
-                .windowedBy(hoppingWindow)
-                .aggregate(
-                        TradeStats::new,
-                        (ticker, trade, agg) -> agg.add(trade),
-                        Materialized.<String, TradeStats, WindowStore<Bytes, byte[]>>as(AGGREGATE_STORE)
-                                .withKeySerde(Serdes.String())
-                                .withValueSerde(tradeStatsSerde)
-                )
-                .toStream()
-                .map((windowedKey, agg) -> {
-                    agg.computeAvgPrice();
-                    Instant start = windowedKey.window().startTime();
-                    Instant end = windowedKey.window().endTime();
-                    agg.setWindowStart(start.toString());
-                    agg.setWindowEnd(end.toString());
-
-                    String outputKey = String.format("%s@%d-%d",
-                            windowedKey.key(), start.toEpochMilli(), end.toEpochMilli());
-
-                    log.info("[STREAMS-WINDOW-OUTPUT] Ticker='{}' Count={} Min={:.2f} Avg={:.2f} Max={:.2f} Window=[{} -> {}]",
-                            agg.getTicker(), agg.getCountTrades(), agg.getMinPrice(),
-                            agg.getAvgPrice(), agg.getMaxPrice(), agg.getWindowStart(), agg.getWindowEnd());
-
-                    return new KeyValue<>(outputKey, agg);
-                });
+        KGroupedStream<String, Trade> statsStream = trades
+                .groupByKey(Grouped.with(Serdes.String(), tradeSerde));
+//                .windowedBy(hoppingWindow)
+//                .aggregate(
+//                        TradeStats::new,
+//                        (ticker, trade, agg) -> agg.add(trade),
+//                        Materialized.<String, TradeStats, WindowStore<Bytes, byte[]>>as(AGGREGATE_STORE)
+//                                .withKeySerde(Serdes.String())
+//                                .withValueSerde(tradeStatsSerde)
+//                )
+//                .toStream()
+//                .map((windowedKey, agg) -> {
+//                    agg.computeAvgPrice();
+//                    Instant start = windowedKey.window().startTime();
+//                    Instant end = windowedKey.window().endTime();
+//                    agg.setWindowStart(start.toString());
+//                    agg.setWindowEnd(end.toString());
+//
+//                    String outputKey = String.format("%s@%d-%d",
+//                            windowedKey.key(), start.toEpochMilli(), end.toEpochMilli());
+//
+//                    log.info("[STREAMS-WINDOW-OUTPUT] Ticker='{}' Count={} Min={:.2f} Avg={:.2f} Max={:.2f} Window=[{} -> {}]",
+//                            agg.getTicker(), agg.getCountTrades(), agg.getMinPrice(),
+//                            agg.getAvgPrice(), agg.getMaxPrice(), agg.getWindowStart(), agg.getWindowEnd());
+//
+//                    return new KeyValue<>(outputKey, agg);
+//                });
 //
 //        // 4. Output the aggregated statistics to the 'stockstats-output' topic
 //        statsStream.to(

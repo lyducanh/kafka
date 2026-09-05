@@ -1,0 +1,54 @@
+spring:
+  application:
+    name: spring-kafka-clickstream-enrich
+
+  kafka:
+    bootstrap-servers: localhost:9092,localhost:9093,localhost:9094
+    consumer:
+      group-id: clickstream-enrich-consumer-group
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.IntegerDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      properties:
+        spring.json.trusted.packages: "*"
+        spring.json.use.type.headers: false
+        spring.json.value.default.type: com.example.clickstream.model.UserActivity
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.IntegerSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+      acks: all
+      retries: 3
+      properties:
+        spring.json.add.type.headers: false
+    streams:
+      application-id: spring-clickstream-enrich-streams
+      bootstrap-servers: localhost:9092,localhost:9093,localhost:9094
+      properties:
+        default.key.serde: org.apache.kafka.common.serialization.Serdes$IntegerSerde
+        default.value.serde: org.apache.kafka.common.serialization.Serdes$StringSerde
+        state.dir: ./data/kafka-streams/clickstream-enrich
+        commit.interval.ms: 1000
+
+server:
+  port: 8083
+
+app:
+  kafka:
+    topics:
+      user-profile: clicks.user.profile
+      page-views: clicks.pages.views
+      search: clicks.search
+      user-activity: clicks.user.activity
+    partitions: 3
+    replication-factor: 3
+  streams:
+    join-window-seconds: 10
+  generator:
+    enabled: false
+    interval-ms: 3000
+
+logging:
+  level:
+    root: INFO
+    com.example.clickstream: INFO
+    org.apache.kafka: WARN
