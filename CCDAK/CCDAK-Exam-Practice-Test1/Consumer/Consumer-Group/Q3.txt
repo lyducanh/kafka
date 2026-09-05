@@ -4,4 +4,4 @@ The topic has 4 partitions, how would you organise the consumers for optimal per
 
 1. Create 8 consumers in the same group with 4 consumer applications for each.
 2. Create 2 consumers in the same group for 2 applications with 8 consumer in each.
-3.  Create 2 consumers in the same group for 2 applications with 4 consumer in each.
+3. Create 2 consumer groups, one for each application, with 4 consumers in each group.

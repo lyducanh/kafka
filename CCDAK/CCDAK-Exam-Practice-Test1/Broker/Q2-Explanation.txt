@@ -1,3 +1,4 @@
 Explanation
+- False
 Setting unclean.leader.election.enable to true means we allow out-of-sync replicas to become leaders, 
 we will lose messages when this occurs, effectively losing credit card payments and making our customers very angry.

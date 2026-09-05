@@ -1,2 +1,3 @@
 Explanation
+- 2 
 Here, we must commit the offsets right after receiving a batch from a call to .poll()

@@ -1,3 +1,4 @@
 Explanation
+- 3
 Kafka replication mechanism makes it resilient to the scenarios where the broker lose data on disk,
 but can recover from replicating from other brokers. This makes Kafka amazing!

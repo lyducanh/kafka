@@ -1,4 +1,5 @@
 Explanation
+- 3
 In case the consumer has the wrong leader of a partition, it will issue a metadata request.
 The Metadata request can be handled by any node, 
 so clients know afterwards which broker are the designated leader for the topic partitions. 

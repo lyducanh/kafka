@@ -1,4 +1,5 @@
 Explanation
+-1  3
 batch.size controls how many bytes of data to collect before sending messages to the Kafka broker. 
 Set this as high as possible, without exceeding available memory.
 Enabling compression can also help make more compact batches and increase the throughput of your producer. 
