@@ -208,8 +208,8 @@ with open(out_json_path, 'w', encoding='utf-8') as f:
 out_js_path = os.path.join(os.path.dirname(__file__), 'questions-data.js')
 with open(out_js_path, 'w', encoding='utf-8') as f:
     f.write("// Confluent Certified Developer for Apache Kafka (CCDAK) Practice Questions Data\n")
-    f.write("const CCDAK_QUESTIONS = ")
+    f.write("var CCDAK_QUESTIONS = ")
     json.dump(questions, f, indent=2, ensure_ascii=False)
-    f.write(";\n")
+    f.write(";\nif (typeof window !== 'undefined') { window.CCDAK_QUESTIONS = CCDAK_QUESTIONS; }\n")
 
 print(f"Successfully generated {out_json_path} and {out_js_path}")

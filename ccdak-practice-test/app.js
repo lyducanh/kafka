@@ -7,10 +7,17 @@
   'use strict';
 
   // Master Questions List
-  const rawQuestions = window.CCDAK_QUESTIONS || [];
-  if (!rawQuestions.length) {
-    console.error('CCDAK questions data not loaded.');
+  function getLoadedQuestions() {
+    if (typeof window !== 'undefined' && window.CCDAK_QUESTIONS && window.CCDAK_QUESTIONS.length) {
+      return window.CCDAK_QUESTIONS;
+    }
+    if (typeof CCDAK_QUESTIONS !== 'undefined' && Array.isArray(CCDAK_QUESTIONS) && CCDAK_QUESTIONS.length) {
+      return CCDAK_QUESTIONS;
+    }
+    return [];
   }
+
+  const rawQuestions = getLoadedQuestions();
 
   // Application State
   const state = {
@@ -670,8 +677,53 @@
   }
 
   /* ==========================================================
-     TIMED EXAM SIMULATOR LOGIC
+     TIMED EXAM SIMULATOR LOGIC & DISTRIBUTION
      ========================================================== */
+  // Confluent CCDAK Blueprint Weights for 60 Questions
+  const CCDAK_EXAM_DISTRIBUTION = {
+    'Producer': 9,              // ~15%
+    'Consumer': 9,              // ~15%
+    'Kafka-Streams': 6,         // ~10%
+    'KSQL': 6,                  // ~10%
+    'Kafka-Connect': 6,         // ~10%
+    'Schema-Registry': 6,       // ~10%
+    'Broker': 5,                // ~8.3%
+    'Security': 3,              // ~5%
+    'Monitoring-Metrics': 3,    // ~5%
+    'Zookeeper': 2,             // ~3.3%
+    'CLI': 2,                   // ~3.3%
+    'REST Proxy': 1,            // ~1.7%
+    'Topic': 1,                 // ~1.7%
+    'Cluster-Administration': 1 // ~1.7%
+  };
+
+  function sampleExamQuestions(allQuestions) {
+    const byCategory = {};
+    allQuestions.forEach((q) => {
+      byCategory[q.category] = byCategory[q.category] || [];
+      byCategory[q.category].push(q);
+    });
+
+    let selected = [];
+    Object.keys(CCDAK_EXAM_DISTRIBUTION).forEach((cat) => {
+      const quota = CCDAK_EXAM_DISTRIBUTION[cat] || 0;
+      const pool = byCategory[cat] || [];
+      const shuffled = [...pool].sort(() => 0.5 - Math.random());
+      selected = selected.concat(shuffled.slice(0, Math.min(quota, pool.length)));
+    });
+
+    // If for any reason total is under 60, fill from remaining questions
+    if (selected.length < 60) {
+      const selectedIds = new Set(selected.map((q) => q.id));
+      const remaining = allQuestions.filter((q) => !selectedIds.has(q.id));
+      const shuffledRemaining = remaining.sort(() => 0.5 - Math.random());
+      selected = selected.concat(shuffledRemaining.slice(0, 60 - selected.length));
+    }
+
+    // Shuffle the final 60 questions so they are randomized in sequence
+    return selected.sort(() => 0.5 - Math.random());
+  }
+
   function startExamMode() {
     if (state.exam.active && !state.exam.submitted) {
       if (
@@ -683,10 +735,8 @@
       }
     }
 
-    // Select 60 randomized questions distributed across categories
-    const sampleSize = Math.min(60, state.allQuestions.length);
-    const shuffled = [...state.allQuestions].sort(() => 0.5 - Math.random());
-    const examQuestions = shuffled.slice(0, sampleSize);
+    // Select 60 questions strictly distributed by CCDAK Blueprint weights
+    const examQuestions = sampleExamQuestions(state.allQuestions);
 
     state.exam = {
       active: true,
@@ -1057,7 +1107,21 @@
   /* ==========================================================
      APPLICATION INITIALIZATION
      ========================================================== */
-  function init() {
+  async function init() {
+    if (!state.allQuestions.length) {
+      state.allQuestions = getLoadedQuestions();
+      if (!state.allQuestions.length && typeof fetch === 'function') {
+        try {
+          const resp = await fetch('questions.json');
+          if (resp.ok) {
+            state.allQuestions = await resp.json();
+          }
+        } catch (e) {
+          console.warn('Could not fetch questions.json:', e);
+        }
+      }
+      state.filteredQuestions = [...state.allQuestions];
+    }
     loadSavedState();
     populateCategories();
     setupEventListeners();
