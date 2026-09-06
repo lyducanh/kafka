@@ -10,8 +10,16 @@ An interactive practice test and exam simulator built from 330 real Confluent Ce
   - Instant feedback on every question.
   - Option verification: highlights correct answers in emerald green and mistakes in crimson red.
   - Comprehensive explanations detailing why the correct answer is right and why other options are incorrect.
+- **Update Answer & Question Editor**:
+  - **Edit Question Button (`✏️ Edit Answer`)**: Click on any question to change which option(s) are accepted as correct, update the explanation, or add personal notes and mnemonics.
+  - **Custom Edits Persistence**: All edits are saved automatically in `localStorage` and marked with an `✏️ Custom Answer` badge.
+  - **Revert Original**: Easily revert any question back to original question bank values with one click.
+  - **Export Dataset (`📥`)**: Download the complete dataset including your custom updates as JSON anytime.
+- **Dynamic Answer Updating & Retries**:
+  - **Try Again Button (`↺ Try Again`)**: Clears check state so you can re-attempt answering without spoiler feedback.
+  - **Clear Choice Button**: Unselects current choices to start fresh.
 - **Timed Exam Simulation Mode**:
-  - Simulates the official CCDAK test environment with **60 randomized questions** across all categories.
+  - Simulates the official CCDAK test environment with **60 randomized questions** across all categories following the official CCDAK domain weights.
   - 90-minute live countdown timer with visual color alerts.
   - Prevents premature answer revelation during the exam.
   - Comprehensive scoring modal with percentage, Pass/Fail status (Confluent standard: $\ge 75\%$), and category-by-category performance breakdown.

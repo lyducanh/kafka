@@ -71,6 +71,10 @@ with open(guide_path, 'w', encoding='utf-8') as f:
             expl_lines = q['explanation'].split('\n')
             for line in expl_lines:
                 f.write(f"> {line}\n")
+            if q.get('personalNotes'):
+                f.write(f">\n> 📝 **Personal Study Notes:**\n")
+                for note_line in q['personalNotes'].split('\n'):
+                    f.write(f"> *{note_line}*\n")
             f.write("\n</details>\n\n")
             f.write("---\n\n")
             global_idx += 1
@@ -87,7 +91,7 @@ with open(csv_path, 'w', encoding='utf-8-sig', newline='') as f:
         'Index', 'ID', 'Category', 'Subcategory', 'Question Number',
         'Is Multi Select', 'Question Text', 'Option 1', 'Option 2',
         'Option 3', 'Option 4', 'Option 5', 'Option 6', 'Correct Answers',
-        'Explanation'
+        'Explanation', 'Personal Notes'
     ])
     
     for idx, q in enumerate(questions, 1):
@@ -105,7 +109,8 @@ with open(csv_path, 'w', encoding='utf-8-sig', newline='') as f:
             q['question'],
             opts[0], opts[1], opts[2], opts[3], opts[4], opts[5],
             ', '.join(q['answers']),
-            q['explanation']
+            q['explanation'],
+            q.get('personalNotes', '')
         ])
 
 print(f"Generated CSV Spreadsheet: {csv_path}")
@@ -129,7 +134,10 @@ with open(anki_path, 'w', encoding='utf-8') as f:
         ans_html = f"<b>Correct Answer:</b> <code>{', '.join(q['answers'])}</code><br><br>"
         expl_html = q['explanation'].replace('\n', '<br>')
         expl_html = re.sub(r'`([^`]+)`', r'<code>\1</code>', expl_html)
-        back = f"{ans_html}<b>Explanation:</b><br>{expl_html}"
+        notes_html = ''
+        if q.get('personalNotes'):
+            notes_html = f"<br><br><b>📝 Personal Notes:</b><br><i>{q['personalNotes'].replace(chr(10), '<br>')}</i>"
+        back = f"{ans_html}<b>Explanation:</b><br>{expl_html}{notes_html}"
         
         # Clean tabs and carriage returns
         front = front.replace('\t', ' ').replace('\r', '')

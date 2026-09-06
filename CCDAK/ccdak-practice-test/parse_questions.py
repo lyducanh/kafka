@@ -184,7 +184,8 @@ for filepath in files:
             'options': options,
             'answers': answers,
             'isMultiSelect': is_multi,
-            'explanation': explanation
+            'explanation': explanation,
+            'personalNotes': ''
         })
 
 print(f"Total parsed questions: {len(questions)}")
@@ -200,8 +201,27 @@ if no_answers:
     for q in no_answers[:5]:
         print("Missing answer for:", q['id'], q['category'])
 
-# Write output files
+# Preserve existing personalNotes and custom overrides from questions.json
 out_json_path = os.path.join(os.path.dirname(__file__), 'questions.json')
+if os.path.exists(out_json_path):
+    try:
+        with open(out_json_path, 'r', encoding='utf-8') as f:
+            existing = {q['id']: q for q in json.load(f)}
+        for q in questions:
+            if q['id'] in existing:
+                ex = existing[q['id']]
+                if ex.get('personalNotes'):
+                    q['personalNotes'] = ex['personalNotes']
+                if ex.get('isCustom'):
+                    q['answers'] = ex['answers']
+                    q['explanation'] = ex['explanation']
+                    q['isCustom'] = True
+                    q['isMultiSelect'] = ex.get('isMultiSelect', len(q['answers']) > 1)
+        print("Preserved existing user personalNotes and custom edits from questions.json.")
+    except Exception as e:
+        print(f"Notice: Could not load existing questions.json: {e}")
+
+# Write output files
 with open(out_json_path, 'w', encoding='utf-8') as f:
     json.dump(questions, f, indent=2, ensure_ascii=False)
 

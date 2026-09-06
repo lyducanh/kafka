@@ -50,10 +50,13 @@
       categoryStats: {}
     },
 
-    theme: 'dark'
+    theme: 'dark',
+    customOverrides: {}, // { [questionId]: { answers: string[], explanation: string, notes?: string, isCustom: boolean } }
+    originalQuestionsMap: {} // { [questionId]: { answers: string[], explanation: string, isMultiSelect: boolean } }
   };
 
   const STORAGE_KEY = 'ccdak_interactive_test_v1';
+  const OVERRIDES_KEY = 'ccdak_custom_overrides_v1';
 
   // DOM Elements
   const els = {
@@ -81,6 +84,8 @@
     subcatTag: document.getElementById('subcatTag'),
     qNumTag: document.getElementById('qNumTag'),
     multiBadge: document.getElementById('multiBadge'),
+    editedBadge: document.getElementById('editedBadge'),
+    editQuestionBtn: document.getElementById('editQuestionBtn'),
     flagBtn: document.getElementById('flagBtn'),
     flagText: document.getElementById('flagText'),
     questionText: document.getElementById('questionText'),
@@ -102,6 +107,8 @@
     prevBtn: document.getElementById('prevBtn'),
     nextBtn: document.getElementById('nextBtn'),
     checkBtn: document.getElementById('checkBtn'),
+    retryBtn: document.getElementById('retryBtn'),
+    clearAnswerBtn: document.getElementById('clearAnswerBtn'),
     flipBtn: document.getElementById('flipBtn'),
 
     // Search & Filters
@@ -117,6 +124,7 @@
 
     // Tools
     themeToggle: document.getElementById('themeToggle'),
+    exportDatasetBtn: document.getElementById('exportDatasetBtn'),
     resetProgressBtn: document.getElementById('resetProgressBtn'),
 
     // Exam Modal
@@ -128,7 +136,20 @@
     categoryBreakdown: document.getElementById('categoryBreakdown'),
     reviewExamBtn: document.getElementById('reviewExamBtn'),
     retakeExamBtn: document.getElementById('retakeExamBtn'),
-    backToPracticeBtn: document.getElementById('backToPracticeBtn')
+    backToPracticeBtn: document.getElementById('backToPracticeBtn'),
+
+    // Edit Answer Modal
+    editAnswerModal: document.getElementById('editAnswerModal'),
+    closeEditModalBtn: document.getElementById('closeEditModalBtn'),
+    editMetaTag: document.getElementById('editMetaTag'),
+    editQuestionId: document.getElementById('editQuestionId'),
+    editQuestionPreview: document.getElementById('editQuestionPreview'),
+    editOptionsContainer: document.getElementById('editOptionsContainer'),
+    editExplanationInput: document.getElementById('editExplanationInput'),
+    editNotesInput: document.getElementById('editNotesInput'),
+    saveEditBtn: document.getElementById('saveEditBtn'),
+    restoreOriginalBtn: document.getElementById('restoreOriginalBtn'),
+    cancelEditBtn: document.getElementById('cancelEditBtn')
   };
 
   /* ==========================================================
@@ -196,8 +217,45 @@
         state.theme = parsed.theme || 'dark';
       }
       applyTheme(state.theme);
+
+      // Load custom question overrides (answer/explanation edits)
+      const savedOverrides = localStorage.getItem(OVERRIDES_KEY);
+      if (savedOverrides) {
+        state.customOverrides = JSON.parse(savedOverrides) || {};
+        applyCustomOverrides();
+      }
     } catch (err) {
       console.warn('Could not load saved state:', err);
+    }
+  }
+
+  function applyCustomOverrides() {
+    state.allQuestions.forEach((q) => {
+      // Backup original if not already recorded
+      if (!state.originalQuestionsMap[q.id]) {
+        state.originalQuestionsMap[q.id] = {
+          answers: [...q.answers],
+          explanation: q.explanation,
+          isMultiSelect: q.isMultiSelect
+        };
+      }
+      const override = state.customOverrides[q.id];
+      if (override) {
+        q.answers = [...override.answers];
+        q.explanation = override.explanation;
+        q.personalNotes = override.personalNotes || override.notes || '';
+        q.customNotes = q.personalNotes;
+        q.isCustom = true;
+        q.isMultiSelect = override.answers.length > 1;
+      }
+    });
+  }
+
+  function saveCustomOverrides() {
+    try {
+      localStorage.setItem(OVERRIDES_KEY, JSON.stringify(state.customOverrides));
+    } catch (err) {
+      console.warn('Could not save overrides:', err);
     }
   }
 
@@ -443,6 +501,11 @@
     els.flagBtn.classList.toggle('flagged', isFlagged);
     els.flagText.textContent = isFlagged ? 'Flagged' : 'Flag';
 
+    // Custom Answer Badge
+    if (els.editedBadge) {
+      els.editedBadge.style.display = q.isCustom ? 'inline-block' : 'none';
+    }
+
     // Flashcard vs Normal View
     if (state.mode === 'flashcard') {
       renderFlashcardView(q);
@@ -466,12 +529,23 @@
       isChecked = state.exam.submitted || state.exam.isReviewing;
       // In active exam mode, disable Check Answer button
       els.checkBtn.style.display = 'none';
+      if (els.retryBtn) els.retryBtn.style.display = 'none';
+      if (els.clearAnswerBtn) {
+        els.clearAnswerBtn.style.display = (!state.exam.submitted && userAnswers.length > 0) ? 'inline-flex' : 'none';
+      }
     } else {
       userAnswers = state.userAnswers[q.id] || [];
       isChecked = !!state.checkedQuestions[q.id];
       els.checkBtn.style.display = 'inline-flex';
       els.checkBtn.disabled = userAnswers.length === 0;
       els.checkBtn.textContent = isChecked ? 'Re-Check' : 'Check Answer';
+
+      if (els.retryBtn) {
+        els.retryBtn.style.display = isChecked ? 'inline-flex' : 'none';
+      }
+      if (els.clearAnswerBtn) {
+        els.clearAnswerBtn.style.display = userAnswers.length > 0 ? 'inline-flex' : 'none';
+      }
     }
 
     // Render Options List
@@ -537,8 +611,18 @@
         `;
       }
 
-      els.correctAnswerBadge.textContent = `Correct Answer: ${q.answers.join(', ')}`;
-      els.explanationContent.innerHTML = formatMarkdown(q.explanation);
+      els.correctAnswerBadge.textContent = `Correct Answer: ${q.answers.join(', ')}${q.isCustom ? ' (Custom)' : ''}`;
+      
+      let explHtml = formatMarkdown(q.explanation);
+      if (q.customNotes) {
+        explHtml += `
+          <div style="margin-top: 1rem; padding: 0.75rem 1rem; background: var(--bg-secondary); border-left: 3px solid var(--warning); border-radius: 6px;">
+            <div style="font-weight: 700; color: var(--warning); margin-bottom: 0.25rem;">📝 Personal Study Notes:</div>
+            <div>${formatMarkdown(q.customNotes)}</div>
+          </div>
+        `;
+      }
+      els.explanationContent.innerHTML = explHtml;
     } else {
       els.explanationCard.style.display = 'none';
     }
@@ -551,15 +635,26 @@
     els.questionView.style.display = 'none';
     els.flashcardView.style.display = 'block';
     els.checkBtn.style.display = 'none';
+    if (els.retryBtn) els.retryBtn.style.display = 'none';
+    if (els.clearAnswerBtn) els.clearAnswerBtn.style.display = 'none';
     els.flipBtn.style.display = 'inline-flex';
 
     // Reset flip
     els.flashcardInner.classList.remove('flipped');
 
-    els.fcCategory.textContent = `${q.category} · Q${q.questionNumber || state.currentIndex + 1}`;
+    els.fcCategory.textContent = `${q.category} · Q${q.questionNumber || state.currentIndex + 1}${q.isCustom ? ' (Custom Answer)' : ''}`;
     els.fcQuestion.innerHTML = formatMarkdown(q.question);
     els.fcAnswerBadge.textContent = `Correct Answer: ${q.answers.join(', ')}`;
-    els.fcExplanation.innerHTML = formatMarkdown(q.explanation);
+    
+    let fcExplHtml = formatMarkdown(q.explanation);
+    if (q.customNotes) {
+      fcExplHtml += `
+        <div style="margin-top: 0.75rem; padding: 0.5rem; background: var(--bg-primary); border-left: 3px solid var(--warning); border-radius: 4px; font-size: 0.85rem;">
+          <b style="color: var(--warning);">Note:</b> ${formatMarkdown(q.customNotes)}
+        </div>
+      `;
+    }
+    els.fcExplanation.innerHTML = fcExplHtml;
   }
 
   function toggleFlashcardFlip() {
@@ -949,6 +1044,250 @@
   }
 
   /* ==========================================================
+     EXPORT DATASET WITH USER UPDATES
+     ========================================================== */
+  function exportDatasetJson() {
+    const dataStr =
+      'data:text/json;charset=utf-8,' +
+      encodeURIComponent(JSON.stringify(state.allQuestions, null, 2));
+    const downloadAnchor = document.createElement('a');
+    downloadAnchor.setAttribute('href', dataStr);
+    downloadAnchor.setAttribute('download', 'ccdak_questions_updated.json');
+    document.body.appendChild(downloadAnchor);
+    downloadAnchor.click();
+    downloadAnchor.remove();
+  }
+
+  /* ==========================================================
+     UPDATE QUESTION ANSWER & EXPLANATION (EDIT MODAL)
+     ========================================================== */
+  function openEditModal(q) {
+    if (!q) return;
+
+    // Save original values if not already recorded
+    if (!state.originalQuestionsMap[q.id]) {
+      state.originalQuestionsMap[q.id] = {
+        answers: [...q.answers],
+        explanation: q.explanation,
+        isMultiSelect: q.isMultiSelect
+      };
+    }
+
+    els.editMetaTag.textContent = `${q.category} · Q${q.questionNumber || state.currentIndex + 1}`;
+    els.editQuestionId.textContent = `[ID: ${q.id}]`;
+    els.editQuestionPreview.innerHTML = formatMarkdown(q.question);
+    els.editExplanationInput.value = q.explanation;
+    els.editNotesInput.value = q.personalNotes || q.customNotes || '';
+
+    // Render options checkboxes
+    els.editOptionsContainer.innerHTML = '';
+    q.options.forEach((opt) => {
+      const isChecked = q.answers.includes(opt.id);
+      const label = document.createElement('label');
+      label.className = `edit-option-item ${isChecked ? 'checked' : ''}`;
+
+      const cb = document.createElement('input');
+      cb.type = 'checkbox';
+      cb.value = opt.id;
+      cb.checked = isChecked;
+
+      cb.addEventListener('change', () => {
+        label.classList.toggle('checked', cb.checked);
+      });
+
+      const optBadge = document.createElement('strong');
+      optBadge.style.minWidth = '24px';
+      optBadge.textContent = `${opt.id}.`;
+
+      const optText = document.createElement('span');
+      optText.style.flex = '1';
+      optText.style.fontSize = '0.9rem';
+      optText.innerHTML = formatMarkdown(opt.text);
+
+      label.appendChild(cb);
+      label.appendChild(optBadge);
+      label.appendChild(optText);
+
+      els.editOptionsContainer.appendChild(label);
+    });
+
+    els.editAnswerModal.style.display = 'flex';
+  }
+
+  function closeEditModal() {
+    if (els.editAnswerModal) {
+      els.editAnswerModal.style.display = 'none';
+    }
+  }
+
+  // Toast Notification Helper
+  function showToast(msg) {
+    let toast = document.getElementById('appToast');
+    if (!toast) {
+      toast = document.createElement('div');
+      toast.id = 'appToast';
+      toast.style.position = 'fixed';
+      toast.style.bottom = '24px';
+      toast.style.right = '24px';
+      toast.style.backgroundColor = 'var(--bg-secondary)';
+      toast.style.color = 'var(--text-primary)';
+      toast.style.border = '1px solid var(--primary)';
+      toast.style.padding = '0.75rem 1.25rem';
+      toast.style.borderRadius = '8px';
+      toast.style.boxShadow = '0 10px 25px rgba(0,0,0,0.5)';
+      toast.style.zIndex = '9999';
+      toast.style.fontSize = '0.9rem';
+      toast.style.fontWeight = '600';
+      toast.style.transition = 'opacity 0.3s ease';
+      document.body.appendChild(toast);
+    }
+    toast.textContent = msg;
+    toast.style.opacity = '1';
+    toast.style.display = 'block';
+    clearTimeout(toast.timer);
+    toast.timer = setTimeout(() => {
+      toast.style.opacity = '0';
+      setTimeout(() => { toast.style.display = 'none'; }, 300);
+    }, 4000);
+  }
+
+  // Persist edits directly to questions.json on disk via server.py
+  async function persistQuestionToDisk(q) {
+    const payload = {
+      id: q.id,
+      answers: q.answers,
+      explanation: q.explanation,
+      personalNotes: q.personalNotes || q.customNotes || ''
+    };
+
+    const endpoints = [
+      '/api/save-question',
+      'http://localhost:3000/api/save-question'
+    ];
+
+    let success = false;
+    for (const url of endpoints) {
+      try {
+        const resp = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        if (resp.ok) {
+          const res = await resp.json();
+          console.log('[Disk Sync]', res.message);
+          success = true;
+          break;
+        }
+      } catch (err) {
+        // Fallback to next endpoint
+      }
+    }
+    return success;
+  }
+
+  function saveQuestionEdits() {
+    const q = getCurrentQuestion();
+    if (!q) return;
+
+    const selectedAnswers = Array.from(
+      els.editOptionsContainer.querySelectorAll('input:checked')
+    ).map((cb) => cb.value);
+
+    if (selectedAnswers.length === 0) {
+      alert('Please check at least one option as the correct answer.');
+      return;
+    }
+
+    const newExplanation = els.editExplanationInput.value.trim() || q.explanation;
+    const newNotes = els.editNotesInput.value.trim();
+
+    // Ensure original is saved
+    if (!state.originalQuestionsMap[q.id]) {
+      state.originalQuestionsMap[q.id] = {
+        answers: [...q.answers],
+        explanation: q.explanation,
+        isMultiSelect: q.isMultiSelect
+      };
+    }
+
+    // Apply updates
+    q.answers = selectedAnswers;
+    q.explanation = newExplanation;
+    q.personalNotes = newNotes;
+    q.customNotes = newNotes;
+    q.isCustom = true;
+    q.isMultiSelect = selectedAnswers.length > 1;
+
+    state.customOverrides[q.id] = {
+      answers: selectedAnswers,
+      explanation: newExplanation,
+      notes: newNotes,
+      personalNotes: newNotes,
+      isCustom: true
+    };
+
+    saveCustomOverrides();
+    closeEditModal();
+
+    renderQuestion();
+    renderQuestionGrid();
+    updateTopStats();
+
+    // Sync to disk
+    persistQuestionToDisk(q).then((persisted) => {
+      if (persisted) {
+        showToast('Saved to questions.json on disk! 💾');
+      } else {
+        showToast('Saved in browser. (Run server.py or click 📥 to export to file).');
+      }
+    });
+  }
+
+  function restoreOriginalQuestion() {
+    const q = getCurrentQuestion();
+    if (!q) return;
+
+    const orig = state.originalQuestionsMap[q.id];
+    if (!orig && !q.isCustom) {
+      alert('This question already has its original question bank values.');
+      return;
+    }
+
+    if (
+      !confirm(
+        'Revert this question back to the original question bank answer and explanation?'
+      )
+    ) {
+      return;
+    }
+
+    if (orig) {
+      q.answers = [...orig.answers];
+      q.explanation = orig.explanation;
+      q.isMultiSelect = orig.isMultiSelect;
+    }
+    q.personalNotes = '';
+    q.customNotes = '';
+    q.isCustom = false;
+
+    delete state.customOverrides[q.id];
+    saveCustomOverrides();
+    closeEditModal();
+
+    renderQuestion();
+    renderQuestionGrid();
+    updateTopStats();
+
+    // Sync revert to disk
+    persistQuestionToDisk(q).then((persisted) => {
+      if (persisted) {
+        showToast('Reverted question in questions.json on disk! ↺');
+      }
+    });
+  }
+
+  /* ==========================================================
      EVENT LISTENERS & BINDINGS
      ========================================================== */
   function setupEventListeners() {
@@ -979,6 +1318,62 @@
 
     // Check Answer
     els.checkBtn.addEventListener('click', checkAnswer);
+
+    // Retry / Try Again
+    if (els.retryBtn) {
+      els.retryBtn.addEventListener('click', () => {
+        const q = getCurrentQuestion();
+        if (!q) return;
+        state.checkedQuestions[q.id] = false;
+        saveState();
+        renderQuestion();
+        renderQuestionGrid();
+        updateTopStats();
+      });
+    }
+
+    // Clear Answer Choice
+    if (els.clearAnswerBtn) {
+      els.clearAnswerBtn.addEventListener('click', () => {
+        const q = getCurrentQuestion();
+        if (!q) return;
+        if (state.mode === 'exam') {
+          state.exam.answers[q.id] = [];
+        } else {
+          state.userAnswers[q.id] = [];
+          state.checkedQuestions[q.id] = false;
+          saveState();
+        }
+        renderQuestion();
+        renderQuestionGrid();
+        updateTopStats();
+      });
+    }
+
+    // Edit Question Modal Listeners
+    if (els.editQuestionBtn) {
+      els.editQuestionBtn.addEventListener('click', () => {
+        const q = getCurrentQuestion();
+        if (!q) return;
+        openEditModal(q);
+      });
+    }
+
+    if (els.closeEditModalBtn) {
+      els.closeEditModalBtn.addEventListener('click', closeEditModal);
+    }
+
+    if (els.cancelEditBtn) {
+      els.cancelEditBtn.addEventListener('click', closeEditModal);
+    }
+
+    if (els.saveEditBtn) {
+      els.saveEditBtn.addEventListener('click', saveQuestionEdits);
+    }
+
+    if (els.restoreOriginalBtn) {
+      els.restoreOriginalBtn.addEventListener('click', restoreOriginalQuestion);
+    }
 
     // Flip Flashcard
     els.flipBtn.addEventListener('click', toggleFlashcardFlip);
@@ -1040,6 +1435,11 @@
       saveState();
     });
 
+    // Export Dataset with Custom Edits
+    if (els.exportDatasetBtn) {
+      els.exportDatasetBtn.addEventListener('click', exportDatasetJson);
+    }
+
     // Reset Progress
     els.resetProgressBtn.addEventListener('click', resetAllProgress);
 
@@ -1062,10 +1462,13 @@
         return;
       }
 
-      // Close modal on Escape
+      // Close modals on Escape
       if (e.key === 'Escape') {
         if (els.resultsModal.style.display === 'flex') {
           els.resultsModal.style.display = 'none';
+        }
+        if (els.editAnswerModal && els.editAnswerModal.style.display === 'flex') {
+          closeEditModal();
         }
         return;
       }
