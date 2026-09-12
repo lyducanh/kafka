@@ -43,6 +43,7 @@
       modeExam: 'Timed Exam',
       modeFlashcard: 'Flashcards',
       modeBlog: 'Blog & Guides',
+      modeVisualizer: 'Kafka Visualizer',
       searchPlaceholder: 'Search questions...',
       themeToggleTitle: 'Toggle Light/Dark Theme',
       exportBtnTitle: 'Export questions dataset (with custom updates) to JSON',
@@ -153,6 +154,7 @@
       modeExam: 'Thi Thử Tính Giờ',
       modeFlashcard: 'Thẻ Ghi Nhớ',
       modeBlog: 'Bài Viết & Blog',
+      modeVisualizer: 'Mô Phỏng Trực Quan',
       searchPlaceholder: 'Tìm kiếm câu hỏi...',
       themeToggleTitle: 'Chuyển đổi Giao diện Sáng/Tối',
       exportBtnTitle: 'Xuất dữ liệu câu hỏi (kèm cập nhật) ra JSON',
@@ -317,9 +319,12 @@
     modeExam: document.getElementById('modeExam'),
     modeFlashcard: document.getElementById('modeFlashcard'),
     modeBlog: document.getElementById('modeBlog'),
+    modeVisualizer: document.getElementById('modeVisualizer'),
     modeButtons: document.querySelectorAll('.mode-btn'),
 
-    // Top Stats & Container
+    // Blog & Visualizer Containers
+    blogContainer: document.getElementById('blogContainer'),
+    visualizerContainer: document.getElementById('visualizerContainer'),
     topStatsBar: document.querySelector('.top-stats-bar'),
     sidebar: document.querySelector('.sidebar'),
     progressText: document.getElementById('progressText'),
@@ -793,9 +798,12 @@
     if (els.restoreOriginalBtn) els.restoreOriginalBtn.textContent = t('restoreOriginalBtn');
     if (els.cancelEditBtn) els.cancelEditBtn.textContent = t('cancelEditBtn');
 
-    // Blog Labels
+    // Blog & Visualizer Labels
+    window.CURRENT_LANG = state.lang;
     const modeBlogLabel = document.getElementById('modeBlogLabel');
     if (modeBlogLabel) modeBlogLabel.textContent = t('modeBlog');
+    const modeVisualizerLabel = document.getElementById('modeVisualizerLabel');
+    if (modeVisualizerLabel) modeVisualizerLabel.textContent = t('modeVisualizer');
     const blogHeroBadge = document.getElementById('blogHeroBadge');
     if (blogHeroBadge) blogHeroBadge.textContent = t('blogHeroBadge');
     const blogHeroTitle = document.getElementById('blogHeroTitle');
@@ -825,6 +833,8 @@
     populateCategories();
     if (state.mode === 'blog') {
       renderBlogListView();
+    } else if (state.mode === 'visualizer') {
+      if (window.KafkaViz) window.KafkaViz.render();
     } else {
       renderQuestion();
       updateTopStats();
@@ -1827,12 +1837,21 @@
       if (els.sidebar) els.sidebar.style.display = 'none';
       if (els.topStatsBar) els.topStatsBar.style.display = 'none';
       if (els.blogContainer) els.blogContainer.style.display = 'block';
+      if (els.visualizerContainer) els.visualizerContainer.style.display = 'none';
       renderBlogListView();
+    } else if (targetMode === 'visualizer') {
+      els.questionCard.style.display = 'none';
+      if (els.sidebar) els.sidebar.style.display = 'none';
+      if (els.topStatsBar) els.topStatsBar.style.display = 'none';
+      if (els.blogContainer) els.blogContainer.style.display = 'none';
+      if (els.visualizerContainer) els.visualizerContainer.style.display = 'block';
+      if (window.KafkaViz) window.KafkaViz.render();
     } else {
       els.questionCard.style.display = 'block';
       if (els.sidebar) els.sidebar.style.display = 'block';
       if (els.topStatsBar) els.topStatsBar.style.display = 'flex';
       if (els.blogContainer) els.blogContainer.style.display = 'none';
+      if (els.visualizerContainer) els.visualizerContainer.style.display = 'none';
 
       if (targetMode === 'exam') {
         if (state.exam.active || state.exam.submitted) {
@@ -2135,11 +2154,11 @@
       });
     }
 
-    // Mode Switchers
     if (els.modePractice) els.modePractice.addEventListener('click', () => switchMode('practice'));
     if (els.modeExam) els.modeExam.addEventListener('click', () => switchMode('exam'));
     if (els.modeFlashcard) els.modeFlashcard.addEventListener('click', () => switchMode('flashcard'));
     if (els.modeBlog) els.modeBlog.addEventListener('click', () => switchMode('blog'));
+    if (els.modeVisualizer) els.modeVisualizer.addEventListener('click', () => switchMode('visualizer'));
 
     // Blog Navigation & Search
     if (els.backToBlogListBtn) {
@@ -2515,6 +2534,9 @@
     populateCategories();
     setupEventListeners();
     applyFilters();
+    if (window.KafkaViz) {
+      window.KafkaViz.init();
+    }
   }
 
   // Run on DOM ready

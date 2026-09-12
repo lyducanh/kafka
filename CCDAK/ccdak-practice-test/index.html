@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>CCDAK Practice Exam - Interactive Test & Certification Simulator</title>
   <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="visualizer.css" />
   <link rel="icon" type="image/svg+xml" href="kafka-logo.svg" />
 </head>
 <body>
@@ -36,6 +37,9 @@
           </button>
           <button class="mode-btn" data-mode="blog" id="modeBlog">
             <span>📚</span> <span id="modeBlogLabel">Blog & Guides</span>
+          </button>
+          <button class="mode-btn" data-mode="visualizer" id="modeVisualizer">
+            <span>📊</span> <span id="modeVisualizerLabel">Visualizer</span>
           </button>
         </div>
 
@@ -467,6 +471,9 @@
         </article>
       </div>
     </section>
+
+    <!-- Visualizer Container -->
+    <section class="visualizer-container-section" id="visualizerContainer" style="display: none;"></section>
   </main>
 
   <!-- Markdown Editor & Preview / Import Modal -->
@@ -570,6 +577,7 @@
   <!-- Data & Application Logic Scripts -->
   <script src="questions-data.js"></script>
   <script src="blogs-data.js"></script>
+  <script src="visualizer.js"></script>
   <script src="app.js"></script>
 </body>
 </html>
