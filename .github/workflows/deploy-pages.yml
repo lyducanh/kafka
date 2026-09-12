@@ -33,6 +33,10 @@ jobs:
         with:
           enablement: true
 
+      - name: Build Blog Posts from Markdown
+        run: |
+          python3 CCDAK/ccdak-practice-test/build_blogs.py
+
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:

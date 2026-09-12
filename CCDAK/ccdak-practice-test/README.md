@@ -36,8 +36,14 @@ An interactive practice test and exam simulator built from 330 real Confluent Ce
   - Jump directly to any question with one click.
 - **State Persistence**:
   - All progress, checked status, flagged questions, and theme selections persist automatically in `localStorage`.
-- **Light / Dark Mode**:
-  - Elegant dark theme inspired by modern developer environments, with easy toggle to light theme.
+- **Markdown Blog & Knowledge Base**:
+  - Full-featured technical blog for deep dives into Apache Kafka & CCDAK concepts.
+  - Native Markdown parsing (`.md`) with support for headings, code blocks with syntax styling, formatted tables, lists, callout alerts, and responsive reading view.
+  - Category tags filter and search across all blog posts.
+  - **In-Browser Markdown Importer & Live Editor (`📝 Write / Import Markdown`)**: Drag & drop or paste any custom `.md` file to preview or publish instantly in your browser session.
+  - Automated build script (`build_blogs.py`) to compile Markdown files into web-ready JSON and JavaScript data bundles.
+- **Bilingual Support (EN / VI)**:
+  - Complete toggle for English and Vietnamese interface, question prompts, choices, explanations, and exam feedback.
 - **Offline & Standalone Ready**:
   - Runs with zero npm dependencies or build steps. Works directly over `file:///` or HTTP.
 
@@ -64,6 +70,31 @@ Then visit [http://localhost:3000](http://localhost:3000).
 
 ### Option 4: Double-Click Launcher (Windows)
 Double-click `start.bat` to launch the local server and open your default browser.
+
+---
+
+## How to Publish New Blog Posts
+
+1. Create a new `.md` file inside `CCDAK/ccdak-practice-test/posts/` (e.g. `05_kafka_consumer_rebalance.md`).
+2. Add YAML frontmatter at the top of the file:
+   ```markdown
+   ---
+   title: "Kafka Consumer Group Rebalance Protocols"
+   description: "Eager vs Cooperative Sticky rebalance protocols explained."
+   date: "2026-03-15"
+   author: "Kafka Architect"
+   category: "Consumer"
+   tags: ["Consumer", "Rebalance", "Architecture"]
+   readTime: "6 min read"
+   ---
+
+   # Your Markdown content here...
+   ```
+3. Run the compiler script:
+   ```bash
+   python3 CCDAK/ccdak-practice-test/build_blogs.py
+   ```
+4. Commit and push your changes to GitHub! The GitHub Actions workflow will automatically build and deploy the new articles.
 
 ---
 

@@ -34,6 +34,9 @@
           <button class="mode-btn" data-mode="flashcard" id="modeFlashcard">
             <span>🎴</span> <span id="modeFlashcardLabel">Flashcards</span>
           </button>
+          <button class="mode-btn" data-mode="blog" id="modeBlog">
+            <span>📚</span> <span id="modeBlogLabel">Blog & Guides</span>
+          </button>
         </div>
 
         <div class="search-wrapper">
@@ -398,7 +401,105 @@
         </div>
       </div>
     </aside>
+
+    <!-- Dedicated Blog View Container -->
+    <section id="blogContainer" class="blog-container" style="display: none;">
+      <!-- Blog List View -->
+      <div id="blogListView" class="blog-list-view">
+        <div class="blog-hero">
+          <div class="blog-hero-content">
+            <span class="blog-badge" id="blogHeroBadge">📚 Technical Articles & Exam Guides</span>
+            <h2 id="blogHeroTitle">Apache Kafka & CCDAK Deep-Dive Articles</h2>
+            <p id="blogHeroDesc">Practical study guides, core architecture internals, and real-world event streaming best practices written in Markdown.</p>
+          </div>
+          <div class="blog-hero-actions">
+            <button id="openMdEditorBtn" class="btn btn-primary">✍️ <span id="writePostBtnLabel">Custom Markdown / Import .md</span></button>
+          </div>
+        </div>
+
+        <!-- Blog Filters & Search -->
+        <div class="blog-toolbar">
+          <div class="blog-tags-filter" id="blogTagsFilter">
+            <!-- Dynamic tags -->
+          </div>
+          <div class="blog-search-wrapper">
+            <span class="blog-search-icon">🔍</span>
+            <input type="text" id="blogSearchInput" class="blog-search-input" placeholder="Search articles, topics, tags..." />
+          </div>
+        </div>
+
+        <!-- Blog Grid -->
+        <div id="blogGrid" class="blog-grid">
+          <!-- Rendered blog post cards -->
+        </div>
+      </div>
+
+      <!-- Blog Detail View (Single Article) -->
+      <div id="blogDetailView" class="blog-detail-view" style="display: none;">
+        <div class="blog-detail-nav">
+          <button id="backToBlogListBtn" class="btn btn-secondary">
+            ← <span id="backToBlogListLabel">Back to All Articles</span>
+          </button>
+          <div class="blog-detail-meta-actions">
+            <span id="blogArticleReadingTime" class="badge badge-info">⏱️ 6 min read</span>
+            <button id="copyArticleLinkBtn" class="btn-icon" title="Copy article link">🔗</button>
+          </div>
+        </div>
+
+        <article class="blog-article">
+          <header class="blog-article-header">
+            <div id="blogArticleIcon" class="blog-article-icon">🎓</div>
+            <h1 id="blogArticleTitle" class="blog-article-title"></h1>
+            <div class="blog-article-meta">
+              <span id="blogArticleAuthor">✍️ By Kafka Specialist</span>
+              <span>•</span>
+              <span id="blogArticleDate">📅 2026-09-12</span>
+              <span>•</span>
+              <div id="blogArticleTags" class="blog-article-tags"></div>
+            </div>
+          </header>
+
+          <div id="blogArticleContent" class="blog-article-content markdown-body"></div>
+
+          <footer class="blog-article-footer">
+            <button id="bottomBackToBlogBtn" class="btn btn-secondary">← <span id="bottomBackToBlogLabel">Back to Blog List</span></button>
+          </footer>
+        </article>
+      </div>
+    </section>
   </main>
+
+  <!-- Markdown Editor & Preview / Import Modal -->
+  <div id="markdownEditorModal" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="mdModalTitle">
+    <div class="modal-content" style="max-width: 900px; width: 95%;">
+      <div class="modal-header" style="text-align: left; display: flex; justify-content: space-between; align-items: center;">
+        <h2 id="mdModalTitle" style="font-size: 1.3rem; margin: 0;">✍️ <span id="mdEditorModalTitle">Markdown Post Viewer & Editor</span></h2>
+        <button id="closeMdEditorBtn" class="btn-icon" style="font-size: 1.2rem;">✕</button>
+      </div>
+
+      <div class="md-import-zone" id="mdDropZone">
+        <input type="file" id="mdFileInput" accept=".md,.markdown,.txt" style="display: none;" />
+        <div style="font-size: 1.5rem; margin-bottom: 0.25rem;">📄</div>
+        <div><strong id="dropZoneText">Click to choose a .md file</strong> <span id="orDragText">or drag & drop here to render</span></div>
+      </div>
+
+      <div class="md-editor-layout">
+        <div class="md-editor-pane">
+          <label class="form-label" id="mdInputLabel">Markdown Content:</label>
+          <textarea id="rawMarkdownInput" class="form-textarea" rows="12" placeholder="# Title&#10;&#10;Write your markdown here..."></textarea>
+        </div>
+        <div class="md-preview-pane">
+          <label class="form-label" id="mdPreviewLabel">Live Preview:</label>
+          <div id="liveMarkdownPreview" class="markdown-body" style="height: 320px; overflow-y: auto; padding: 0.75rem; background: var(--bg-tertiary); border-radius: 8px; border: 1px solid var(--border-color);"></div>
+        </div>
+      </div>
+
+      <div class="modal-actions" style="margin-top: 1rem; justify-content: flex-end; gap: 0.75rem;">
+        <button id="renderAsArticleBtn" class="btn btn-primary">📖 <span id="renderAsArticleLabel">View as Full Article</span></button>
+        <button id="cancelMdEditorBtn" class="btn btn-secondary"><span id="closeMdLabel">Close</span></button>
+      </div>
+    </div>
+  </div>
 
   <!-- Exam Results Modal -->
   <div id="resultsModal" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
@@ -428,15 +529,11 @@
     </div>
   </div>
 
-  <!-- Edit / Update Answer Modal -->
+  <!-- Edit Answer & Explanation Modal -->
   <div id="editAnswerModal" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="editModalTitle">
-    <div class="modal-content" style="max-width: 680px;">
-      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem;">
-        <h2 id="editModalTitle" style="font-size: 1.3rem;">✏️ Update Answer & Explanation</h2>
-        <button id="closeEditModalBtn" class="btn-icon" title="Close" aria-label="Close modal">✕</button>
-      </div>
-
-      <div style="margin-bottom: 1rem; font-size: 0.85rem; color: var(--text-secondary);">
+    <div class="modal-content" style="max-width: 680px; text-align: left;">
+      <div class="modal-header" style="text-align: left;">
+        <h2 id="editModalTitle" style="font-size: 1.3rem; margin-bottom: 0.25rem;">✏️ Edit Question Answer & Notes</h2>
         <span id="editMetaTag" class="category-tag">Broker · Q1</span>
         <span id="editQuestionId" style="margin-left: 0.5rem; opacity: 0.7;"></span>
       </div>
@@ -472,6 +569,7 @@
 
   <!-- Data & Application Logic Scripts -->
   <script src="questions-data.js"></script>
+  <script src="blogs-data.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

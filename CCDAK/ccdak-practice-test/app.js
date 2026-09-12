@@ -17,7 +17,19 @@
     return [];
   }
 
+  // Master Blogs List
+  function getLoadedBlogs() {
+    if (typeof window !== 'undefined' && window.CCDAK_BLOGS && window.CCDAK_BLOGS.length) {
+      return window.CCDAK_BLOGS;
+    }
+    if (typeof CCDAK_BLOGS !== 'undefined' && Array.isArray(CCDAK_BLOGS) && CCDAK_BLOGS.length) {
+      return CCDAK_BLOGS;
+    }
+    return [];
+  }
+
   const rawQuestions = getLoadedQuestions();
+  const rawBlogs = getLoadedBlogs();
 
   /* ==========================================================
      INTERNATIONALIZATION (i18n) DICTIONARY
@@ -30,6 +42,7 @@
       modePractice: 'Practice Mode',
       modeExam: 'Timed Exam',
       modeFlashcard: 'Flashcards',
+      modeBlog: 'Blog & Guides',
       searchPlaceholder: 'Search questions...',
       themeToggleTitle: 'Toggle Light/Dark Theme',
       exportBtnTitle: 'Export questions dataset (with custom updates) to JSON',
@@ -118,7 +131,19 @@
       resetSuccessAlert: 'All practice progress has been reset.',
       savedToDiskToast: 'Saved to questions.json on disk! 💾',
       savedToBrowserToast: 'Saved in browser. (Run server.py or click 📥 to export to file).',
-      revertPrompt: 'Revert this question back to the original question bank answer and explanation?'
+      revertPrompt: 'Revert this question back to the original question bank answer and explanation?',
+      blogHeroBadge: '📚 Technical Articles & Exam Guides',
+      blogHeroTitle: 'Apache Kafka & CCDAK Deep-Dive Articles',
+      blogHeroDesc: 'Practical study guides, core architecture internals, and real-world event streaming best practices written in Markdown.',
+      writePostBtnLabel: 'Custom Markdown / Import .md',
+      backToBlogListLabel: 'Back to All Articles',
+      searchBlogPlaceholder: 'Search articles, topics, tags...',
+      mdEditorModalTitle: 'Markdown Post Viewer & Editor',
+      dropZoneText: 'Click to choose a .md file',
+      orDragText: 'or drag & drop here to render',
+      renderAsArticleLabel: 'View as Full Article',
+      closeMdLabel: 'Close',
+      copiedLinkToast: 'Article link copied to clipboard! 🔗'
     },
     vi: {
       langBtn: '🇬🇧 English',
@@ -127,6 +152,7 @@
       modePractice: 'Luyện Tập',
       modeExam: 'Thi Thử Tính Giờ',
       modeFlashcard: 'Thẻ Ghi Nhớ',
+      modeBlog: 'Bài Viết & Blog',
       searchPlaceholder: 'Tìm kiếm câu hỏi...',
       themeToggleTitle: 'Chuyển đổi Giao diện Sáng/Tối',
       exportBtnTitle: 'Xuất dữ liệu câu hỏi (kèm cập nhật) ra JSON',
@@ -215,7 +241,19 @@
       resetSuccessAlert: 'Tất cả tiến độ luyện tập đã được đặt lại.',
       savedToDiskToast: 'Đã lưu vào file questions.json trên đĩa! 💾',
       savedToBrowserToast: 'Đã lưu trong trình duyệt. (Chạy server.py hoặc bấm 📥 để xuất file).',
-      revertPrompt: 'Khôi phục câu hỏi này về đáp án và giải thích ban đầu của ngân hàng đề thi?'
+      revertPrompt: 'Khôi phục câu hỏi này về đáp án và giải thích ban đầu của ngân hàng đề thi?',
+      blogHeroBadge: '📚 Bài Viết Kỹ Thuật & Hướng Dẫn Luyện Thi',
+      blogHeroTitle: 'Chuyên Mục Kiến Thức & Bài Viết Chuyên Sâu',
+      blogHeroDesc: 'Tổng hợp kinh nghiệm luyện thi, giải mã kiến trúc phân tán và các hướng dẫn thực chiến với Apache Kafka viết bằng Markdown.',
+      writePostBtnLabel: '✍️ Viết & Xem File .md',
+      backToBlogListLabel: 'Quay lại danh sách bài viết',
+      searchBlogPlaceholder: 'Tìm kiếm bài viết, chủ đề, thẻ...',
+      mdEditorModalTitle: 'Trình Soạn Thảo & Xem File Markdown',
+      dropZoneText: 'Nhấp để chọn file .md',
+      orDragText: 'hoặc kéo thả file vào đây để xem',
+      renderAsArticleLabel: 'Xem Dưới Dạng Bài Viết',
+      closeMdLabel: 'Đóng',
+      copiedLinkToast: 'Đã sao chép liên kết bài viết! 🔗'
     }
   };
 
@@ -229,13 +267,19 @@
   // Application State
   const state = {
     lang: 'vi', // 'vi' | 'en'
-    mode: 'practice', // 'practice' | 'exam' | 'flashcard'
+    mode: 'practice', // 'practice' | 'exam' | 'flashcard' | 'blog'
     allQuestions: rawQuestions,
     filteredQuestions: [...rawQuestions],
     currentIndex: 0,
     selectedCategory: 'ALL',
     statusFilter: 'all', // 'all' | 'unanswered' | 'incorrect' | 'flagged'
     searchQuery: '',
+
+    // Blog State
+    blogs: rawBlogs,
+    selectedBlog: null,
+    blogTagFilter: 'ALL',
+    blogSearch: '',
 
     // User Progress (Persisted in localStorage)
     userAnswers: {}, // { [questionId]: [selectedOptionIds] }
@@ -272,9 +316,12 @@
     modePractice: document.getElementById('modePractice'),
     modeExam: document.getElementById('modeExam'),
     modeFlashcard: document.getElementById('modeFlashcard'),
+    modeBlog: document.getElementById('modeBlog'),
     modeButtons: document.querySelectorAll('.mode-btn'),
 
-    // Top Stats
+    // Top Stats & Container
+    topStatsBar: document.querySelector('.top-stats-bar'),
+    sidebar: document.querySelector('.sidebar'),
     progressText: document.getElementById('progressText'),
     progressPercentage: document.getElementById('progressPercentage'),
     progressBarFill: document.getElementById('progressBarFill'),
@@ -339,6 +386,35 @@
     exportDatasetBtn: document.getElementById('exportDatasetBtn'),
     resetProgressBtn: document.getElementById('resetProgressBtn'),
 
+    // Blog Views & Elements
+    blogContainer: document.getElementById('blogContainer'),
+    blogListView: document.getElementById('blogListView'),
+    blogDetailView: document.getElementById('blogDetailView'),
+    blogGrid: document.getElementById('blogGrid'),
+    blogTagsFilter: document.getElementById('blogTagsFilter'),
+    blogSearchInput: document.getElementById('blogSearchInput'),
+    openMdEditorBtn: document.getElementById('openMdEditorBtn'),
+    backToBlogListBtn: document.getElementById('backToBlogListBtn'),
+    bottomBackToBlogBtn: document.getElementById('bottomBackToBlogBtn'),
+    copyArticleLinkBtn: document.getElementById('copyArticleLinkBtn'),
+    blogArticleIcon: document.getElementById('blogArticleIcon'),
+    blogArticleTitle: document.getElementById('blogArticleTitle'),
+    blogArticleAuthor: document.getElementById('blogArticleAuthor'),
+    blogArticleDate: document.getElementById('blogArticleDate'),
+    blogArticleReadingTime: document.getElementById('blogArticleReadingTime'),
+    blogArticleTags: document.getElementById('blogArticleTags'),
+    blogArticleContent: document.getElementById('blogArticleContent'),
+
+    // Markdown Import / Editor Modal
+    markdownEditorModal: document.getElementById('markdownEditorModal'),
+    closeMdEditorBtn: document.getElementById('closeMdEditorBtn'),
+    cancelMdEditorBtn: document.getElementById('cancelMdEditorBtn'),
+    renderAsArticleBtn: document.getElementById('renderAsArticleBtn'),
+    mdFileInput: document.getElementById('mdFileInput'),
+    mdDropZone: document.getElementById('mdDropZone'),
+    rawMarkdownInput: document.getElementById('rawMarkdownInput'),
+    liveMarkdownPreview: document.getElementById('liveMarkdownPreview'),
+
     // Exam Modal
     resultsModal: document.getElementById('resultsModal'),
     modalTitle: document.getElementById('modalTitle'),
@@ -367,56 +443,128 @@
   };
 
   /* ==========================================================
-     UTILITY: Lightweight Safe Markdown to HTML Formatter
+     UTILITY: Full-Featured Safe Markdown to HTML Formatter
      ========================================================== */
   function formatMarkdown(text) {
     if (!text) return '';
-    let escaped = text
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;');
+    let src = text;
 
-    // Fenced code blocks ```code```
-    escaped = escaped.replace(/```([\s\S]*?)```/g, function (match, code) {
-      return `<pre><code>${code.trim()}</code></pre>`;
+    // 1. Fenced code blocks ```lang ... ```
+    src = src.replace(/```([a-zA-Z0-9_-]*)\n?([\s\S]*?)```/g, function (match, lang, code) {
+      const escapedCode = code
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
+      return `<pre class="code-block"><code class="language-${lang || 'text'}">${escapedCode.trim()}</code></pre>`;
     });
 
-    // Inline code `foo`
-    escaped = escaped.replace(/`([^`]+)`/g, '<code>$1</code>');
+    // 2. Headings (# H1, ## H2, ### H3, #### H4)
+    src = src.replace(/^#### (.*$)/gim, '<h4>$1</h4>');
+    src = src.replace(/^### (.*$)/gim, '<h3>$1</h3>');
+    src = src.replace(/^## (.*$)/gim, '<h2>$1</h2>');
+    src = src.replace(/^# (.*$)/gim, '<h1>$1</h1>');
 
-    // Bold **text**
-    escaped = escaped.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+    // 3. Alerts & Blockquotes (> [!NOTE], > [!TIP], > [!WARNING], > [!IMPORTANT], > standard)
+    src = src.replace(/^>\s*\[!NOTE\]\s*(.*$)/gim, '<blockquote class="alert alert-note"><strong>ℹ️ Note:</strong> $1</blockquote>');
+    src = src.replace(/^>\s*\[!TIP\]\s*(.*$)/gim, '<blockquote class="alert alert-tip"><strong>💡 Tip:</strong> $1</blockquote>');
+    src = src.replace(/^>\s*\[!WARNING\]\s*(.*$)/gim, '<blockquote class="alert alert-warning"><strong>⚠️ Warning:</strong> $1</blockquote>');
+    src = src.replace(/^>\s*\[!IMPORTANT\]\s*(.*$)/gim, '<blockquote class="alert alert-important"><strong>❗ Important:</strong> $1</blockquote>');
+    src = src.replace(/^>\s*(.*$)/gim, '<blockquote>$1</blockquote>');
 
-    // Bullet lists lines starting with - or *
-    const lines = escaped.split('\n');
+    // 4. Horizontal rule ---
+    src = src.replace(/^---$/gim, '<hr class="blog-hr" />');
+
+    // 5. Markdown Tables
+    src = src.replace(/((?:\|[^\n]+\|\r?\n)+)/g, function (tableText) {
+      const rows = tableText.trim().split('\n').map((r) => r.trim());
+      if (rows.length < 2) return tableText;
+      let tableHtml = '<div class="table-wrapper"><table class="markdown-table">';
+
+      // Header row
+      const headerCols = rows[0].split('|').slice(1, -1).map((c) => c.trim());
+      tableHtml += '<thead><tr>';
+      headerCols.forEach((col) => {
+        tableHtml += `<th>${col}</th>`;
+      });
+      tableHtml += '</tr></thead><tbody>';
+
+      // Body rows (skip separator row at index 1)
+      for (let i = 2; i < rows.length; i++) {
+        const cols = rows[i].split('|').slice(1, -1).map((c) => c.trim());
+        if (cols.length) {
+          tableHtml += '<tr>';
+          cols.forEach((col) => {
+            tableHtml += `<td>${col}</td>`;
+          });
+          tableHtml += '</tr>';
+        }
+      }
+      tableHtml += '</tbody></table></div>';
+      return tableHtml;
+    });
+
+    // 6. Inline code `foo`
+    src = src.replace(/`([^`\n]+)`/g, '<code>$1</code>');
+
+    // 7. Bold **text** / __text__
+    src = src.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+    src = src.replace(/__([^_]+)__/g, '<strong>$1</strong>');
+
+    // 8. Italic *text* / _text_
+    src = src.replace(/\*([^*]+)\*/g, '<em>$1</em>');
+
+    // 9. Links [text](url)
+    src = src.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>');
+
+    // 10. Process Lists vs Paragraphs
+    const lines = src.split('\n');
     let inList = false;
-    let html = '';
+    let inNumList = false;
+    let outHtml = '';
 
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i];
       const trimmed = line.trim();
 
-      if (trimmed.startsWith('- ') || trimmed.startsWith('* ')) {
-        if (!inList) {
-          html += '<ul>';
-          inList = true;
-        }
-        html += `<li>${trimmed.substring(2)}</li>`;
+      if (!trimmed) {
+        if (inList) { outHtml += '</ul>'; inList = false; }
+        if (inNumList) { outHtml += '</ol>'; inNumList = false; }
+        continue;
+      }
+
+      if (
+        trimmed.startsWith('<div class="table-wrapper"') ||
+        trimmed.startsWith('<table') ||
+        trimmed.startsWith('<h1') ||
+        trimmed.startsWith('<h2') ||
+        trimmed.startsWith('<h3') ||
+        trimmed.startsWith('<h4') ||
+        trimmed.startsWith('<pre') ||
+        trimmed.startsWith('<blockquote') ||
+        trimmed.startsWith('<hr')
+      ) {
+        if (inList) { outHtml += '</ul>'; inList = false; }
+        if (inNumList) { outHtml += '</ol>'; inNumList = false; }
+        outHtml += line;
+      } else if (trimmed.startsWith('- ') || trimmed.startsWith('* ')) {
+        if (inNumList) { outHtml += '</ol>'; inNumList = false; }
+        if (!inList) { outHtml += '<ul>'; inList = true; }
+        outHtml += `<li>${trimmed.substring(2)}</li>`;
+      } else if (/^\d+\.\s/.test(trimmed)) {
+        if (inList) { outHtml += '</ul>'; inList = false; }
+        if (!inNumList) { outHtml += '<ol>'; inNumList = true; }
+        const textAfterNum = trimmed.replace(/^\d+\.\s*/, '');
+        outHtml += `<li>${textAfterNum}</li>`;
       } else {
-        if (inList) {
-          html += '</ul>';
-          inList = false;
-        }
-        if (trimmed) {
-          html += `<p>${line}</p>`;
-        }
+        if (inList) { outHtml += '</ul>'; inList = false; }
+        if (inNumList) { outHtml += '</ol>'; inNumList = false; }
+        outHtml += `<p>${line}</p>`;
       }
     }
-    if (inList) {
-      html += '</ul>';
-    }
+    if (inList) outHtml += '</ul>';
+    if (inNumList) outHtml += '</ol>';
 
-    return html;
+    return outHtml;
   }
 
   /* ==========================================================
@@ -645,9 +793,42 @@
     if (els.restoreOriginalBtn) els.restoreOriginalBtn.textContent = t('restoreOriginalBtn');
     if (els.cancelEditBtn) els.cancelEditBtn.textContent = t('cancelEditBtn');
 
+    // Blog Labels
+    const modeBlogLabel = document.getElementById('modeBlogLabel');
+    if (modeBlogLabel) modeBlogLabel.textContent = t('modeBlog');
+    const blogHeroBadge = document.getElementById('blogHeroBadge');
+    if (blogHeroBadge) blogHeroBadge.textContent = t('blogHeroBadge');
+    const blogHeroTitle = document.getElementById('blogHeroTitle');
+    if (blogHeroTitle) blogHeroTitle.textContent = t('blogHeroTitle');
+    const blogHeroDesc = document.getElementById('blogHeroDesc');
+    if (blogHeroDesc) blogHeroDesc.textContent = t('blogHeroDesc');
+    const writePostBtnLabel = document.getElementById('writePostBtnLabel');
+    if (writePostBtnLabel) writePostBtnLabel.textContent = t('writePostBtnLabel');
+
+    if (els.blogSearchInput) els.blogSearchInput.placeholder = t('searchBlogPlaceholder');
+    const backToBlogListLabel = document.getElementById('backToBlogListLabel');
+    if (backToBlogListLabel) backToBlogListLabel.textContent = t('backToBlogListLabel');
+    const bottomBackToBlogLabel = document.getElementById('bottomBackToBlogLabel');
+    if (bottomBackToBlogLabel) bottomBackToBlogLabel.textContent = t('backToBlogListLabel');
+
+    const mdEditorModalTitle = document.getElementById('mdEditorModalTitle');
+    if (mdEditorModalTitle) mdEditorModalTitle.textContent = t('mdEditorModalTitle');
+    const dropZoneText = document.getElementById('dropZoneText');
+    if (dropZoneText) dropZoneText.textContent = t('dropZoneText');
+    const orDragText = document.getElementById('orDragText');
+    if (orDragText) orDragText.textContent = t('orDragText');
+    const renderAsArticleLabel = document.getElementById('renderAsArticleLabel');
+    if (renderAsArticleLabel) renderAsArticleLabel.textContent = t('renderAsArticleLabel');
+    const closeMdLabel = document.getElementById('closeMdLabel');
+    if (closeMdLabel) closeMdLabel.textContent = t('closeMdLabel');
+
     populateCategories();
-    renderQuestion();
-    updateTopStats();
+    if (state.mode === 'blog') {
+      renderBlogListView();
+    } else {
+      renderQuestion();
+      updateTopStats();
+    }
     saveState();
   }
 
@@ -1435,6 +1616,190 @@
   }
 
   /* ==========================================================
+     BLOG & ARTICLE SYSTEM FUNCTIONS
+     ========================================================== */
+  function getBlogTitle(post) {
+    if (!post) return '';
+    return state.lang === 'vi' && post.title ? post.title : (post.title_en || post.title);
+  }
+
+  function getBlogSummary(post) {
+    if (!post) return '';
+    return state.lang === 'vi' && post.summary ? post.summary : (post.summary_en || post.summary);
+  }
+
+  function renderBlogListView() {
+    if (!els.blogContainer) return;
+    els.blogListView.style.display = 'block';
+    els.blogDetailView.style.display = 'none';
+
+    // 1. Build Tag Filter Buttons
+    const allTags = new Set();
+    state.blogs.forEach((p) => {
+      (p.tags || []).forEach((tag) => allTags.add(tag));
+    });
+
+    els.blogTagsFilter.innerHTML = '';
+    const allBtn = document.createElement('button');
+    allBtn.className = `blog-tag-btn ${state.blogTagFilter === 'ALL' ? 'active' : ''}`;
+    allBtn.textContent = state.lang === 'vi' ? 'Tất cả chủ đề' : 'All Topics';
+    allBtn.addEventListener('click', () => {
+      state.blogTagFilter = 'ALL';
+      renderBlogListView();
+    });
+    els.blogTagsFilter.appendChild(allBtn);
+
+    Array.from(allTags).sort().forEach((tag) => {
+      const btn = document.createElement('button');
+      btn.className = `blog-tag-btn ${state.blogTagFilter === tag ? 'active' : ''}`;
+      btn.textContent = tag;
+      btn.addEventListener('click', () => {
+        state.blogTagFilter = tag;
+        renderBlogListView();
+      });
+      els.blogTagsFilter.appendChild(btn);
+    });
+
+    // 2. Filter posts
+    const query = state.blogSearch.trim().toLowerCase();
+    const filteredBlogs = state.blogs.filter((p) => {
+      if (state.blogTagFilter !== 'ALL' && !(p.tags || []).includes(state.blogTagFilter)) {
+        return false;
+      }
+      if (query) {
+        const titleMatch = (p.title && p.title.toLowerCase().includes(query)) ||
+          (p.title_en && p.title_en.toLowerCase().includes(query));
+        const summaryMatch = (p.summary && p.summary.toLowerCase().includes(query)) ||
+          (p.summary_en && p.summary_en.toLowerCase().includes(query));
+        const tagMatch = (p.tags || []).some((t) => t.toLowerCase().includes(query));
+        const contentMatch = p.content && p.content.toLowerCase().includes(query);
+        if (!titleMatch && !summaryMatch && !tagMatch && !contentMatch) {
+          return false;
+        }
+      }
+      return true;
+    });
+
+    // 3. Render Blog Grid
+    els.blogGrid.innerHTML = '';
+    if (filteredBlogs.length === 0) {
+      els.blogGrid.innerHTML = `
+        <div style="grid-column: 1 / -1; text-align: center; padding: 3rem; background: var(--bg-card); border-radius: 12px; border: 1px solid var(--border-color);">
+          <div style="font-size: 2.5rem; margin-bottom: 0.5rem;">🔍</div>
+          <h3>${state.lang === 'vi' ? 'Không tìm thấy bài viết nào phù hợp' : 'No articles match your search'}</h3>
+          <p style="color: var(--text-secondary); margin-top: 0.25rem;">${state.lang === 'vi' ? 'Hãy thử tìm kiếm với từ khóa khác hoặc bấm "Tất cả chủ đề".' : 'Try searching for different keywords or resetting filters.'}</p>
+        </div>
+      `;
+      return;
+    }
+
+    filteredBlogs.forEach((post) => {
+      const card = document.createElement('div');
+      card.className = 'blog-card';
+
+      const title = getBlogTitle(post);
+      const summary = getBlogSummary(post);
+
+      card.innerHTML = `
+        <div class="blog-card-top">
+          <div class="blog-card-header-meta">
+            <span class="blog-card-icon">${post.cover_icon || '📄'}</span>
+            <span class="blog-card-readtime">⏱️ ${post.reading_time || '5 min'}</span>
+          </div>
+          <h3 class="blog-card-title">${title}</h3>
+          <p class="blog-card-summary">${summary}</p>
+        </div>
+        <div class="blog-card-footer">
+          <span>📅 ${post.date || '2026-09-12'}</span>
+          <div class="blog-card-tags">
+            ${(post.tags || []).slice(0, 3).map((tag) => `<span class="blog-card-tag">${tag}</span>`).join('')}
+          </div>
+        </div>
+      `;
+
+      card.addEventListener('click', () => {
+        openBlogArticle(post);
+      });
+
+      els.blogGrid.appendChild(card);
+    });
+  }
+
+  function openBlogArticle(post) {
+    if (!post) return;
+    state.selectedBlog = post;
+    els.blogListView.style.display = 'none';
+    els.blogDetailView.style.display = 'block';
+
+    const title = getBlogTitle(post);
+
+    els.blogArticleIcon.textContent = post.cover_icon || '🎓';
+    els.blogArticleTitle.textContent = title;
+    els.blogArticleAuthor.textContent = `✍️ ${post.author || 'Kafka Specialist'}`;
+    els.blogArticleDate.textContent = `📅 ${post.date || '2026-09-12'}`;
+    els.blogArticleReadingTime.textContent = `⏱️ ${post.reading_time || '5 min'}`;
+
+    els.blogArticleTags.innerHTML = (post.tags || [])
+      .map((t) => `<span class="badge badge-info">${t}</span>`)
+      .join(' ');
+
+    // Render markdown content
+    els.blogArticleContent.innerHTML = formatMarkdown(post.content || '');
+
+    // Add copy buttons to code blocks
+    els.blogArticleContent.querySelectorAll('pre.code-block').forEach((pre) => {
+      const btn = document.createElement('button');
+      btn.className = 'btn btn-secondary';
+      btn.style.position = 'absolute';
+      btn.style.top = '0.5rem';
+      btn.style.right = '0.5rem';
+      btn.style.fontSize = '0.75rem';
+      btn.style.padding = '0.2rem 0.5rem';
+      btn.textContent = '📋 Copy';
+      pre.style.position = 'relative';
+
+      btn.addEventListener('click', () => {
+        const codeText = pre.querySelector('code').innerText;
+        navigator.clipboard.writeText(codeText).then(() => {
+          btn.textContent = '✓ Copied!';
+          setTimeout(() => (btn.textContent = '📋 Copy'), 2000);
+        });
+      });
+      pre.appendChild(btn);
+    });
+
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  function openMarkdownEditorModal() {
+    if (!els.markdownEditorModal) return;
+    els.markdownEditorModal.style.display = 'flex';
+    
+    // Set initial sample if empty
+    if (!els.rawMarkdownInput.value.trim()) {
+      els.rawMarkdownInput.value = `# Tiêu đề bài viết Markdown mới\n\n> [!NOTE]\n> Đây là bài viết mẫu được viết bằng định dạng Markdown.\n\n## 1. Điểm chính\n- Hỗ trợ cú pháp Markdown chuẩn\n- Bảng dữ liệu (Tables), Code blocks, Danh sách\n- Tự động hiển thị đẹp mắt trên giao diện CCDAK.\n\n\`\`\`java\n// Ví dụ mã nguồn Kafka\nProperties props = new Properties();\nprops.put("bootstrap.servers", "localhost:9092");\n\`\`\`\n`;
+    }
+    els.liveMarkdownPreview.innerHTML = formatMarkdown(els.rawMarkdownInput.value);
+  }
+
+  function closeMarkdownEditorModal() {
+    if (els.markdownEditorModal) {
+      els.markdownEditorModal.style.display = 'none';
+    }
+  }
+
+  function handleFileImport(file) {
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const content = e.target.result;
+      els.rawMarkdownInput.value = content;
+      els.liveMarkdownPreview.innerHTML = formatMarkdown(content);
+    };
+    reader.readAsText(file);
+  }
+
+  /* ==========================================================
      MODE SWITCHING
      ========================================================== */
   function switchMode(targetMode) {
@@ -1457,21 +1822,34 @@
       btn.classList.toggle('active', btn.dataset.mode === targetMode);
     });
 
-    if (targetMode === 'exam') {
-      if (state.exam.active || state.exam.submitted) {
-        els.timerBadge.style.display = state.exam.active ? 'inline-flex' : 'none';
-        els.examSubmitBox.style.display = state.exam.active ? 'block' : 'none';
+    if (targetMode === 'blog') {
+      els.questionCard.style.display = 'none';
+      if (els.sidebar) els.sidebar.style.display = 'none';
+      if (els.topStatsBar) els.topStatsBar.style.display = 'none';
+      if (els.blogContainer) els.blogContainer.style.display = 'block';
+      renderBlogListView();
+    } else {
+      els.questionCard.style.display = 'block';
+      if (els.sidebar) els.sidebar.style.display = 'block';
+      if (els.topStatsBar) els.topStatsBar.style.display = 'flex';
+      if (els.blogContainer) els.blogContainer.style.display = 'none';
+
+      if (targetMode === 'exam') {
+        if (state.exam.active || state.exam.submitted) {
+          els.timerBadge.style.display = state.exam.active ? 'inline-flex' : 'none';
+          els.examSubmitBox.style.display = state.exam.active ? 'block' : 'none';
+        } else {
+          els.timerBadge.style.display = 'none';
+          els.examSubmitBox.style.display = 'none';
+        }
+        renderQuestion();
+        renderQuestionGrid();
+        updateTopStats();
       } else {
         els.timerBadge.style.display = 'none';
         els.examSubmitBox.style.display = 'none';
+        applyFilters();
       }
-      renderQuestion();
-      renderQuestionGrid();
-      updateTopStats();
-    } else {
-      els.timerBadge.style.display = 'none';
-      els.examSubmitBox.style.display = 'none';
-      applyFilters();
     }
   }
 
@@ -1758,9 +2136,130 @@
     }
 
     // Mode Switchers
-    els.modePractice.addEventListener('click', () => switchMode('practice'));
-    els.modeExam.addEventListener('click', () => switchMode('exam'));
-    els.modeFlashcard.addEventListener('click', () => switchMode('flashcard'));
+    if (els.modePractice) els.modePractice.addEventListener('click', () => switchMode('practice'));
+    if (els.modeExam) els.modeExam.addEventListener('click', () => switchMode('exam'));
+    if (els.modeFlashcard) els.modeFlashcard.addEventListener('click', () => switchMode('flashcard'));
+    if (els.modeBlog) els.modeBlog.addEventListener('click', () => switchMode('blog'));
+
+    // Blog Navigation & Search
+    if (els.backToBlogListBtn) {
+      els.backToBlogListBtn.addEventListener('click', () => {
+        els.blogDetailView.style.display = 'none';
+        els.blogListView.style.display = 'block';
+      });
+    }
+
+    if (els.bottomBackToBlogBtn) {
+      els.bottomBackToBlogBtn.addEventListener('click', () => {
+        els.blogDetailView.style.display = 'none';
+        els.blogListView.style.display = 'block';
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      });
+    }
+
+    if (els.blogSearchInput) {
+      let blogSearchTimer;
+      els.blogSearchInput.addEventListener('input', (e) => {
+        clearTimeout(blogSearchTimer);
+        blogSearchTimer = setTimeout(() => {
+          state.blogSearch = e.target.value;
+          renderBlogListView();
+        }, 200);
+      });
+    }
+
+    if (els.copyArticleLinkBtn) {
+      els.copyArticleLinkBtn.addEventListener('click', () => {
+        navigator.clipboard.writeText(window.location.href).then(() => {
+          showToast(t('copiedLinkToast'));
+        });
+      });
+    }
+
+    // Markdown Import / Editor Modal Listeners
+    if (els.openMdEditorBtn) {
+      els.openMdEditorBtn.addEventListener('click', openMarkdownEditorModal);
+    }
+    if (els.closeMdEditorBtn) {
+      els.closeMdEditorBtn.addEventListener('click', closeMarkdownEditorModal);
+    }
+    if (els.cancelMdEditorBtn) {
+      els.cancelMdEditorBtn.addEventListener('click', closeMarkdownEditorModal);
+    }
+
+    if (els.rawMarkdownInput && els.liveMarkdownPreview) {
+      els.rawMarkdownInput.addEventListener('input', () => {
+        els.liveMarkdownPreview.innerHTML = formatMarkdown(els.rawMarkdownInput.value);
+      });
+    }
+
+    if (els.renderAsArticleBtn) {
+      els.renderAsArticleBtn.addEventListener('click', () => {
+        const raw = els.rawMarkdownInput.value.trim();
+        if (!raw) return;
+
+        // Parse frontmatter if any
+        let title = 'Custom Markdown Article';
+        let body = raw;
+        if (raw.startsWith('---')) {
+          const parts = raw.split('---', 2);
+          if (parts.length >= 2) {
+            body = raw.replace(/^---[\s\S]*?---/, '').trim();
+          }
+        }
+        // Grab first heading if available
+        const hMatch = body.match(/^#\s+(.*$)/m);
+        if (hMatch) {
+          title = hMatch[1].trim();
+        }
+
+        const customPost = {
+          id: 'custom-' + Date.now(),
+          title: title,
+          title_en: title,
+          author: state.lang === 'vi' ? 'Tác giả tùy chỉnh' : 'Custom Author',
+          date: new Date().toISOString().split('T')[0],
+          tags: ['Custom', 'Markdown'],
+          summary: body.substring(0, 150) + '...',
+          summary_en: body.substring(0, 150) + '...',
+          cover_icon: '✍️',
+          reading_time: `${Math.max(1, Math.round(body.split(/\s+/).length / 150))} min`,
+          content: body
+        };
+
+        closeMarkdownEditorModal();
+        switchMode('blog');
+        openBlogArticle(customPost);
+      });
+    }
+
+    // Drag & Drop / File Input for Markdown
+    if (els.mdDropZone && els.mdFileInput) {
+      els.mdDropZone.addEventListener('click', () => els.mdFileInput.click());
+
+      els.mdFileInput.addEventListener('change', (e) => {
+        if (e.target.files && e.target.files[0]) {
+          handleFileImport(e.target.files[0]);
+        }
+      });
+
+      els.mdDropZone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        els.mdDropZone.style.borderColor = 'var(--primary)';
+      });
+
+      els.mdDropZone.addEventListener('dragleave', () => {
+        els.mdDropZone.style.borderColor = 'var(--border-color)';
+      });
+
+      els.mdDropZone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        els.mdDropZone.style.borderColor = 'var(--border-color)';
+        if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+          handleFileImport(e.dataTransfer.files[0]);
+        }
+      });
+    }
 
     // Navigation
     els.prevBtn.addEventListener('click', () => {
@@ -1939,6 +2438,9 @@
         if (els.editAnswerModal && els.editAnswerModal.style.display === 'flex') {
           closeEditModal();
         }
+        if (els.markdownEditorModal && els.markdownEditorModal.style.display === 'flex') {
+          closeMarkdownEditorModal();
+        }
         return;
       }
 
@@ -1994,6 +2496,21 @@
       }
       state.filteredQuestions = [...state.allQuestions];
     }
+
+    if (!state.blogs.length) {
+      state.blogs = getLoadedBlogs();
+      if (!state.blogs.length && typeof fetch === 'function') {
+        try {
+          const bResp = await fetch('blogs.json');
+          if (bResp.ok) {
+            state.blogs = await bResp.json();
+          }
+        } catch (e) {
+          console.warn('Could not fetch blogs.json:', e);
+        }
+      }
+    }
+
     loadSavedState();
     populateCategories();
     setupEventListeners();
