@@ -123,6 +123,56 @@
           </div>
         </div>
 
+        <!-- Timed Exam Intro / Start Trigger View -->
+        <div id="examIntroView" style="display: none;">
+          <div class="exam-intro-card">
+            <div class="exam-intro-header">
+              <div class="exam-intro-badge">⏱️ Certification Simulation</div>
+              <h2 class="exam-intro-title">Confluent CCDAK Timed Exam</h2>
+              <p class="exam-intro-desc">
+                Simulate official Confluent CCDAK certification test conditions with randomized blueprint questions, countdown timer, and detailed score breakdown.
+              </p>
+            </div>
+
+            <div class="exam-rules-grid">
+              <div class="exam-rule-card">
+                <div class="rule-icon">📋</div>
+                <div class="rule-details">
+                  <h4>60 Questions</h4>
+                  <p>Distributed strictly following the official CCDAK domain blueprint.</p>
+                </div>
+              </div>
+              <div class="exam-rule-card">
+                <div class="rule-icon">⏳</div>
+                <div class="rule-details">
+                  <h4>90 Minutes</h4>
+                  <p>The timer will start counting down only after you trigger the button below.</p>
+                </div>
+              </div>
+              <div class="exam-rule-card">
+                <div class="rule-icon">🎯</div>
+                <div class="rule-details">
+                  <h4>75% Passing Mark</h4>
+                  <p>Achieve at least 45 out of 60 correct answers to pass the simulation.</p>
+                </div>
+              </div>
+              <div class="exam-rule-card">
+                <div class="rule-icon">🔒</div>
+                <div class="rule-details">
+                  <h4>Exam Mode</h4>
+                  <p>Answers & explanations are hidden during test and unlocked upon submission.</p>
+                </div>
+              </div>
+            </div>
+
+            <div class="exam-intro-cta">
+              <button id="startExamBtn" class="btn btn-primary btn-start-exam">
+                🚀 Start Timed Exam Now
+              </button>
+            </div>
+          </div>
+        </div>
+
         <!-- Flashcard View -->
         <div id="flashcardView" style="display: none;">
           <div class="flashcard-wrapper" id="flashcardWrapper" title="Click anywhere on card to flip">

@@ -79,6 +79,9 @@
     // Question Views
     questionCard: document.getElementById('questionCard'),
     questionView: document.getElementById('questionView'),
+    examIntroView: document.getElementById('examIntroView'),
+    startExamBtn: document.getElementById('startExamBtn'),
+    questionFooter: document.querySelector('.question-footer'),
     flashcardView: document.getElementById('flashcardView'),
     catTag: document.getElementById('catTag'),
     subcatTag: document.getElementById('subcatTag'),
@@ -399,6 +402,17 @@
     let answeredCount = 0;
 
     if (state.mode === 'exam') {
+      if (!state.exam.active && !state.exam.submitted) {
+        els.progressText.textContent = 'Exam Ready (60 Questions)';
+        els.progressPercentage.textContent = '90 Minutes';
+        els.progressBarFill.style.width = '0%';
+        els.statCorrect.textContent = '0';
+        els.statIncorrect.textContent = '0';
+        els.statFlagged.textContent = '0';
+        els.gridProgress.textContent = '0 / 60';
+        return;
+      }
+
       totalQuestions = state.exam.questions.length;
       flaggedCount = Object.keys(state.flaggedQuestions).filter((id) =>
         state.exam.questions.some((q) => q.id === id)
@@ -462,6 +476,28 @@
      RENDERING QUESTION CARD
      ========================================================== */
   function renderQuestion() {
+    // Check if in Timed Exam Intro / Standby state
+    if (state.mode === 'exam' && !state.exam.active && !state.exam.submitted) {
+      if (els.examIntroView) els.examIntroView.style.display = 'block';
+      els.questionView.style.display = 'none';
+      els.flashcardView.style.display = 'none';
+      if (els.questionFooter) els.questionFooter.style.display = 'none';
+
+      els.catTag.textContent = 'Timed Exam';
+      els.subcatTag.textContent = 'CCDAK Simulation';
+      els.qNumTag.textContent = '60 Questions';
+      els.multiBadge.style.display = 'none';
+      if (els.editedBadge) els.editedBadge.style.display = 'none';
+      els.flagBtn.style.display = 'none';
+      els.editQuestionBtn.style.display = 'none';
+      return;
+    }
+
+    if (els.examIntroView) els.examIntroView.style.display = 'none';
+    if (els.questionFooter) els.questionFooter.style.display = 'flex';
+    els.flagBtn.style.display = 'inline-flex';
+    els.editQuestionBtn.style.display = 'inline-flex';
+
     const list = getActiveQuestionList();
     const q = getCurrentQuestion();
 
@@ -718,8 +754,23 @@
      QUESTION GRID PALETTE
      ========================================================== */
   function renderQuestionGrid() {
-    const list = getActiveQuestionList();
     els.questionGrid.innerHTML = '';
+
+    if (state.mode === 'exam' && !state.exam.active && !state.exam.submitted) {
+      for (let i = 1; i <= 60; i++) {
+        const btn = document.createElement('button');
+        btn.className = 'grid-btn';
+        btn.textContent = i;
+        btn.disabled = true;
+        btn.title = `Question ${i} (Unlocked when exam starts)`;
+        btn.style.opacity = '0.35';
+        btn.style.cursor = 'not-allowed';
+        els.questionGrid.appendChild(btn);
+      }
+      return;
+    }
+
+    const list = getActiveQuestionList();
 
     list.forEach((q, idx) => {
       const btn = document.createElement('button');
@@ -1018,7 +1069,16 @@
     });
 
     if (targetMode === 'exam') {
-      startExamMode();
+      if (state.exam.active || state.exam.submitted) {
+        els.timerBadge.style.display = state.exam.active ? 'inline-flex' : 'none';
+        els.examSubmitBox.style.display = state.exam.active ? 'block' : 'none';
+      } else {
+        els.timerBadge.style.display = 'none';
+        els.examSubmitBox.style.display = 'none';
+      }
+      renderQuestion();
+      renderQuestionGrid();
+      updateTopStats();
     } else {
       els.timerBadge.style.display = 'none';
       els.examSubmitBox.style.display = 'none';
@@ -1451,7 +1511,10 @@
     // Reset Progress
     els.resetProgressBtn.addEventListener('click', resetAllProgress);
 
-    // Exam Submission & Modal
+    // Exam Trigger, Submission & Modal
+    if (els.startExamBtn) {
+      els.startExamBtn.addEventListener('click', startExamMode);
+    }
     els.submitExamBtn.addEventListener('click', () => submitExam(false));
     els.reviewExamBtn.addEventListener('click', enterReviewMode);
     els.retakeExamBtn.addEventListener('click', () => {

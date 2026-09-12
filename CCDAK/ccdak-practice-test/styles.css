@@ -1003,3 +1003,115 @@ header {
   accent-color: var(--success);
 }
 
+/* Timed Exam Intro Screen */
+.exam-intro-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 2.5rem 1.5rem;
+  max-width: 760px;
+  margin: 0 auto;
+}
+
+.exam-intro-header {
+  margin-bottom: 2rem;
+}
+
+.exam-intro-badge {
+  display: inline-block;
+  background: var(--primary-light);
+  color: var(--primary);
+  border: 1px solid var(--primary);
+  padding: 0.35rem 0.9rem;
+  border-radius: 999px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  margin-bottom: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.exam-intro-title {
+  font-size: 1.85rem;
+  font-weight: 800;
+  color: var(--text-primary);
+  margin-bottom: 0.75rem;
+}
+
+.exam-intro-desc {
+  font-size: 1rem;
+  color: var(--text-secondary);
+  line-height: 1.6;
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+.exam-rules-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 1rem;
+  width: 100%;
+  margin-bottom: 2.25rem;
+  text-align: left;
+}
+
+.exam-rule-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius);
+  padding: 1.25rem;
+  transition: var(--transition);
+}
+
+.exam-rule-card:hover {
+  border-color: var(--primary);
+  transform: translateY(-2px);
+}
+
+.rule-icon {
+  font-size: 1.75rem;
+  flex-shrink: 0;
+  line-height: 1;
+}
+
+.rule-details h4 {
+  font-size: 1rem;
+  color: var(--text-primary);
+  margin-bottom: 0.25rem;
+  font-weight: 700;
+}
+
+.rule-details p {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  line-height: 1.45;
+}
+
+.exam-intro-cta {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+  width: 100%;
+}
+
+.btn-start-exam {
+  font-size: 1.15rem !important;
+  font-weight: 700 !important;
+  padding: 1rem 2.5rem !important;
+  border-radius: 12px !important;
+  box-shadow: 0 8px 25px rgba(59, 130, 246, 0.4);
+  transition: all 0.25s ease !important;
+  letter-spacing: 0.02em;
+}
+
+.btn-start-exam:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 30px rgba(59, 130, 246, 0.5);
+}
+
+
