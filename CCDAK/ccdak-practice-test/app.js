@@ -19,8 +19,216 @@
 
   const rawQuestions = getLoadedQuestions();
 
+  /* ==========================================================
+     INTERNATIONALIZATION (i18n) DICTIONARY
+     ========================================================== */
+  const I18N = {
+    en: {
+      langBtn: '🇻🇳 Tiếng Việt',
+      brandTitle: 'CCDAK Exam Practice',
+      brandSubtitle: '330 Real Practice Questions with Explanations',
+      modePractice: 'Practice Mode',
+      modeExam: 'Timed Exam',
+      modeFlashcard: 'Flashcards',
+      searchPlaceholder: 'Search questions...',
+      themeToggleTitle: 'Toggle Light/Dark Theme',
+      exportBtnTitle: 'Export questions dataset (with custom updates) to JSON',
+      resetBtnTitle: 'Reset All Progress',
+      questionOf: (curr, total) => `Question ${curr} of ${total}`,
+      percentCompleted: (p) => `${p}% Completed`,
+      statCorrect: 'Correct',
+      statIncorrect: 'Incorrect',
+      statFlagged: 'Flagged',
+      editAnswerBtn: 'Edit Answer',
+      flagText: 'Flag',
+      flaggedText: 'Flagged',
+      selectMultipleBadge: (n) => `Select ${n} (${n > 1 ? 'Multiple' : 'Single'})`,
+      customAnswerBadge: '✏️ Custom Answer',
+      checkBtn: 'Check Answer',
+      recheckBtn: 'Re-Check',
+      retryBtn: '↺ Try Again',
+      clearChoiceBtn: 'Clear Choice',
+      flipBtn: 'Flip Card ↺',
+      prevBtn: '← Previous',
+      nextBtn: 'Next →',
+      correctStatus: 'Correct! Well done.',
+      incorrectStatus: 'Incorrect. Review the concept below:',
+      correctAnswerLabel: (ans) => `Correct Answer: ${ans}`,
+      fcHintFront: '💡 Click to flip and reveal answer & explanation',
+      fcHintBack: '🔄 Click to flip back',
+      fcAnswerLabel: (ans) => `Correct Answer: ${ans}`,
+      sidebarCatFilterTitle: 'Categories & Filters',
+      allCategoriesOption: (count) => `All Categories (${count})`,
+      filterAll: 'All',
+      filterUnanswered: 'Unanswered',
+      filterIncorrect: 'Incorrect',
+      filterFlagged: 'Flagged',
+      sidebarGridTitle: 'Question Grid',
+      submitExamBtn: 'Submit Exam & View Results',
+      shortcutsTitle: 'Keyboard Shortcuts',
+      shortcut1: 'Select Option',
+      shortcut2: 'Check Answer / Flip',
+      shortcut3: 'Previous / Next',
+      shortcut4: 'Flag / Unflag',
+      examReadyText: 'Exam Ready (60 Questions)',
+      examDurationText: '90 Minutes',
+      examIntroBadge: '⏱️ Certification Simulation',
+      examIntroTitle: 'Confluent CCDAK Timed Exam',
+      examIntroDesc: 'Simulate official Confluent CCDAK certification test conditions with randomized blueprint questions, countdown timer, and detailed score breakdown.',
+      rule60Q_title: '60 Questions',
+      rule60Q_desc: 'Distributed strictly following the official CCDAK domain blueprint.',
+      rule90M_title: '90 Minutes',
+      rule90M_desc: 'The timer will start counting down only after you trigger the button below.',
+      rule75P_title: '75% Passing Mark',
+      rule75P_desc: 'Achieve at least 45 out of 60 correct answers to pass the simulation.',
+      ruleLock_title: 'Exam Mode',
+      ruleLock_desc: 'Answers & explanations are hidden during test and unlocked upon submission.',
+      startExamBtn: '🚀 Start Timed Exam Now',
+      distBlueprintTitle: '📊 Exam Blueprint Distribution',
+      distTotalBadge: '60 Questions Total · 14 Topics',
+      domain1_name: '🧩 Clients & Core Development',
+      domain2_name: '⚡ Real-Time Stream Processing',
+      domain3_name: '🔄 Integration, Governance & REST',
+      domain4_name: '🖥️ Cluster Architecture & Storage',
+      domain5_name: '🛡️ Security, Operations & CLI',
+      noMatchFilter: '🔍 No questions match the current filter.',
+      noMatchHint: 'Try selecting "All Categories" or resetting the status filter.',
+      resultsModalTitle: 'Confluent CCDAK Exam Results',
+      passedBadge: 'PASSED (≥ 75%)',
+      failedBadge: 'DID NOT PASS (< 75%)',
+      finalScore: 'Final Score',
+      examSummary: (score, total) => `You scored ${score} out of ${total} questions correctly. Confluent CCDAK requires a passing score of 75%.`,
+      topicBreakdownTitle: 'Topic Breakdown',
+      reviewExamBtn: 'Review Questions',
+      retakeExamBtn: 'Retake New Exam',
+      backToPracticeBtn: 'Exit to Practice Mode',
+      editModalTitle: '✏️ Update Answer & Explanation',
+      formLabelQuestion: 'Question Text',
+      formLabelOptions: 'Select Correct Answer(s):',
+      formSubLabelOptions: 'Check the option(s) that should be accepted as the correct answer:',
+      formLabelExplanation: 'Explanation & Rationale:',
+      formLabelNotes: 'Personal Notes / Mnemonics (Optional):',
+      saveEditBtn: '💾 Save Updates',
+      restoreOriginalBtn: '↺ Revert Original',
+      cancelEditBtn: 'Cancel',
+      confirmExitExam: 'You have an ongoing exam. Leaving exam mode will terminate your current session. Continue?',
+      confirmRestartExam: 'An exam is currently running. Do you want to restart with a new set of 60 questions?',
+      confirmUnansweredSubmit: (unanswered) => `You have ${unanswered} unanswered question(s). Are you sure you want to finish and submit the exam?`,
+      confirmResetProgress: 'Are you sure you want to reset all your answers, checked questions, and flagged bookmarks?',
+      resetSuccessAlert: 'All practice progress has been reset.',
+      savedToDiskToast: 'Saved to questions.json on disk! 💾',
+      savedToBrowserToast: 'Saved in browser. (Run server.py or click 📥 to export to file).',
+      revertPrompt: 'Revert this question back to the original question bank answer and explanation?'
+    },
+    vi: {
+      langBtn: '🇬🇧 English',
+      brandTitle: 'Luyện Thi CCDAK',
+      brandSubtitle: '330 Câu Hỏi Thực Tế Kèm Lời Giải Chi Tiết',
+      modePractice: 'Luyện Tập',
+      modeExam: 'Thi Thử Tính Giờ',
+      modeFlashcard: 'Thẻ Ghi Nhớ',
+      searchPlaceholder: 'Tìm kiếm câu hỏi...',
+      themeToggleTitle: 'Chuyển đổi Giao diện Sáng/Tối',
+      exportBtnTitle: 'Xuất dữ liệu câu hỏi (kèm cập nhật) ra JSON',
+      resetBtnTitle: 'Đặt lại toàn bộ tiến độ',
+      questionOf: (curr, total) => `Câu ${curr} / ${total}`,
+      percentCompleted: (p) => `Hoàn thành ${p}%`,
+      statCorrect: 'Đúng',
+      statIncorrect: 'Sai',
+      statFlagged: 'Đánh dấu',
+      editAnswerBtn: 'Sửa đáp án',
+      flagText: 'Đánh dấu',
+      flaggedText: 'Đã đánh dấu',
+      selectMultipleBadge: (n) => `Chọn ${n} đáp án (${n > 1 ? 'Nhiều lựa chọn' : 'Một lựa chọn'})`,
+      customAnswerBadge: '✏️ Đáp án tùy chỉnh',
+      checkBtn: 'Kiểm tra đáp án',
+      recheckBtn: 'Kiểm tra lại',
+      retryBtn: '↺ Làm lại',
+      clearChoiceBtn: 'Xóa lựa chọn',
+      flipBtn: 'Lật thẻ ↺',
+      prevBtn: '← Câu trước',
+      nextBtn: 'Tiếp theo →',
+      correctStatus: 'Chính xác! Làm rất tốt. ✓',
+      incorrectStatus: 'Chưa chính xác. Hãy xem giải thích bên dưới: ✗',
+      correctAnswerLabel: (ans) => `Đáp án đúng: ${ans}`,
+      fcHintFront: '💡 Nhấp để lật thẻ và xem đáp án & giải thích',
+      fcHintBack: '🔄 Nhấp để lật lại mặt trước',
+      fcAnswerLabel: (ans) => `Đáp án đúng: ${ans}`,
+      sidebarCatFilterTitle: 'Danh Mục & Bộ Lọc',
+      allCategoriesOption: (count) => `Tất cả danh mục (${count})`,
+      filterAll: 'Tất cả',
+      filterUnanswered: 'Chưa làm',
+      filterIncorrect: 'Làm sai',
+      filterFlagged: 'Đã đánh dấu',
+      sidebarGridTitle: 'Ma Trận Câu Hỏi',
+      submitExamBtn: 'Nộp Bài Thi & Xem Kết Quả',
+      shortcutsTitle: 'Phím Tắt Bàn Phím',
+      shortcut1: 'Chọn đáp án',
+      shortcut2: 'Kiểm tra / Lật thẻ',
+      shortcut3: 'Câu trước / Tiếp theo',
+      shortcut4: 'Đánh dấu / Bỏ dấu',
+      examReadyText: 'Đề thi sẵn sàng (60 Câu)',
+      examDurationText: '90 Phút',
+      examIntroBadge: '⏱️ Mô Phỏng Kỳ Thi Chứng Chỉ',
+      examIntroTitle: 'Kỳ Thi Thử Confluent CCDAK Tính Giờ',
+      examIntroDesc: 'Mô phỏng sát thực tế kỳ thi chứng chỉ Confluent CCDAK với 60 câu hỏi ngẫu nhiên theo ma trận blueprint, đồng hồ đếm ngược 90 phút và bảng phân tích điểm thi chi tiết.',
+      rule60Q_title: '60 Câu Hỏi',
+      rule60Q_desc: 'Phân bổ chính xác theo ma trận đề thi chính thức của Confluent CCDAK.',
+      rule90M_title: '90 Phút Làm Bài',
+      rule90M_desc: 'Đồng hồ đếm ngược 90 phút chỉ kích hoạt khi bạn bấm nút bắt đầu thi.',
+      rule75P_title: 'Điểm Đạt 75%',
+      rule75P_desc: 'Cần đạt tối thiểu 45/60 câu trả lời đúng để vượt qua kỳ thi thử.',
+      ruleLock_title: 'Quy Chế Thi',
+      ruleLock_desc: 'Đáp án và giải thích được ẩn trong lúc làm bài và sẽ mở khóa toàn bộ khi nộp bài.',
+      startExamBtn: '🚀 Bắt Đầu Làm Bài Thi Ngay',
+      distBlueprintTitle: '📊 Ma Trận Phân Bổ Tỷ Trọng Đề Thi',
+      distTotalBadge: 'Tổng 60 câu hỏi · 14 chủ đề',
+      domain1_name: '🧩 Clients & Lập Trình Cốt Lõi',
+      domain2_name: '⚡ Xử Lý Dữ Liệu Luồng Thời Gian Thực',
+      domain3_name: '🔄 Tích Hợp, Quản Trị Schema & REST',
+      domain4_name: '🖥️ Kiến Trúc Cụm & Lưu Trữ Broker',
+      domain5_name: '🛡️ Bảo Mật, Giám Sát & Công Cụ CLI',
+      noMatchFilter: '🔍 Không có câu hỏi nào khớp với bộ lọc hiện tại.',
+      noMatchHint: 'Hãy thử chọn "Tất cả danh mục" hoặc đặt lại bộ lọc trạng thái.',
+      resultsModalTitle: 'Kết Quả Thi Thử Confluent CCDAK',
+      passedBadge: 'ĐẠT (≥ 75%)',
+      failedBadge: 'CHƯA ĐẠT (< 75%)',
+      finalScore: 'Điểm Tổng Kết',
+      examSummary: (score, total) => `Bạn đã trả lời đúng ${score} / ${total} câu hỏi. Confluent CCDAK yêu cầu điểm số tối thiểu 75% để đạt chứng chỉ.`,
+      topicBreakdownTitle: 'Phân Tích Kết Quả Theo Chủ Đề',
+      reviewExamBtn: 'Xem Lại Bài Thi & Lời Giải',
+      retakeExamBtn: 'Thi Lại Đề Mới',
+      backToPracticeBtn: 'Trở Về Chế Độ Luyện Tập',
+      editModalTitle: '✏️ Cập Nhật Đáp Án & Lời Giải',
+      formLabelQuestion: 'Nội Dung Câu Hỏi',
+      formLabelOptions: 'Chọn Đáp Án Đúng:',
+      formSubLabelOptions: 'Tích chọn các phương án được chấp nhận là đáp án đúng:',
+      formLabelExplanation: 'Giải Thích & Lý Do Chọn Đáp Án:',
+      formLabelNotes: 'Ghi Chú Cá Nhân / Mẹo Ghi Nhớ (Tùy chọn):',
+      saveEditBtn: '💾 Lưu Thay Đổi',
+      restoreOriginalBtn: '↺ Khôi Phục Gốc',
+      cancelEditBtn: 'Hủy Bỏ',
+      confirmExitExam: 'Bạn đang trong bài thi tính giờ. Rời khỏi chế độ thi sẽ kết thúc phiên thi hiện tại. Bạn có chắc chắn muốn thoát?',
+      confirmRestartExam: 'Một bài thi đang diễn ra. Bạn có muốn bắt đầu lại với bộ 60 câu hỏi mới không?',
+      confirmUnansweredSubmit: (unanswered) => `Bạn còn ${unanswered} câu hỏi chưa trả lời. Bạn có chắc chắn muốn kết thúc và nộp bài thi?`,
+      confirmResetProgress: 'Bạn có chắc chắn muốn đặt lại tất cả câu trả lời, trạng thái đã kiểm tra và câu hỏi đã đánh dấu không?',
+      resetSuccessAlert: 'Tất cả tiến độ luyện tập đã được đặt lại.',
+      savedToDiskToast: 'Đã lưu vào file questions.json trên đĩa! 💾',
+      savedToBrowserToast: 'Đã lưu trong trình duyệt. (Chạy server.py hoặc bấm 📥 để xuất file).',
+      revertPrompt: 'Khôi phục câu hỏi này về đáp án và giải thích ban đầu của ngân hàng đề thi?'
+    }
+  };
+
+  // Helper function to get translated text
+  function t(key, ...args) {
+    const langDict = I18N[state.lang] || I18N.en;
+    const val = langDict[key] !== undefined ? langDict[key] : (I18N.en[key] || key);
+    return typeof val === 'function' ? val(...args) : val;
+  }
+
   // Application State
   const state = {
+    lang: 'vi', // 'vi' | 'en'
     mode: 'practice', // 'practice' | 'exam' | 'flashcard'
     allQuestions: rawQuestions,
     filteredQuestions: [...rawQuestions],
@@ -126,12 +334,14 @@
     submitExamBtn: document.getElementById('submitExamBtn'),
 
     // Tools
+    langToggle: document.getElementById('langToggle'),
     themeToggle: document.getElementById('themeToggle'),
     exportDatasetBtn: document.getElementById('exportDatasetBtn'),
     resetProgressBtn: document.getElementById('resetProgressBtn'),
 
     // Exam Modal
     resultsModal: document.getElementById('resultsModal'),
+    modalTitle: document.getElementById('modalTitle'),
     modalScoreCircle: document.getElementById('modalScoreCircle'),
     scorePercent: document.getElementById('scorePercent'),
     passBadge: document.getElementById('passBadge'),
@@ -143,6 +353,7 @@
 
     // Edit Answer Modal
     editAnswerModal: document.getElementById('editAnswerModal'),
+    editModalTitle: document.getElementById('editModalTitle'),
     closeEditModalBtn: document.getElementById('closeEditModalBtn'),
     editMetaTag: document.getElementById('editMetaTag'),
     editQuestionId: document.getElementById('editQuestionId'),
@@ -182,19 +393,21 @@
     let html = '';
 
     for (let i = 0; i < lines.length; i++) {
-      const line = lines[i].trim();
-      if (/^[-*]\s+/.test(line)) {
+      const line = lines[i];
+      const trimmed = line.trim();
+
+      if (trimmed.startsWith('- ') || trimmed.startsWith('* ')) {
         if (!inList) {
           html += '<ul>';
           inList = true;
         }
-        html += `<li>${line.replace(/^[-*]\s+/, '')}</li>`;
+        html += `<li>${trimmed.substring(2)}</li>`;
       } else {
         if (inList) {
           html += '</ul>';
           inList = false;
         }
-        if (line.length > 0) {
+        if (trimmed) {
           html += `<p>${line}</p>`;
         }
       }
@@ -214,12 +427,14 @@
       const saved = localStorage.getItem(STORAGE_KEY);
       if (saved) {
         const parsed = JSON.parse(saved);
+        state.lang = parsed.lang || 'vi';
         state.userAnswers = parsed.userAnswers || {};
         state.checkedQuestions = parsed.checkedQuestions || {};
         state.flaggedQuestions = parsed.flaggedQuestions || {};
         state.theme = parsed.theme || 'dark';
       }
       applyTheme(state.theme);
+      applyLanguage(state.lang);
 
       // Load custom question overrides (answer/explanation edits)
       const savedOverrides = localStorage.getItem(OVERRIDES_KEY);
@@ -267,6 +482,7 @@
       localStorage.setItem(
         STORAGE_KEY,
         JSON.stringify({
+          lang: state.lang,
           userAnswers: state.userAnswers,
           checkedQuestions: state.checkedQuestions,
           flaggedQuestions: state.flaggedQuestions,
@@ -284,6 +500,157 @@
     els.themeToggle.textContent = theme === 'dark' ? '☀️' : '🌙';
   }
 
+  function applyLanguage(lang) {
+    state.lang = lang;
+    document.documentElement.setAttribute('lang', lang);
+    if (els.langToggle) {
+      els.langToggle.textContent = t('langBtn');
+    }
+
+    // Update Header
+    const brandTitle = document.getElementById('brandTitle');
+    if (brandTitle) brandTitle.textContent = t('brandTitle');
+    const brandSubtitle = document.getElementById('brandSubtitle');
+    if (brandSubtitle) brandSubtitle.textContent = t('brandSubtitle');
+
+    const modePracticeLabel = document.getElementById('modePracticeLabel');
+    if (modePracticeLabel) modePracticeLabel.textContent = t('modePractice');
+    const modeExamLabel = document.getElementById('modeExamLabel');
+    if (modeExamLabel) modeExamLabel.textContent = t('modeExam');
+    const modeFlashcardLabel = document.getElementById('modeFlashcardLabel');
+    if (modeFlashcardLabel) modeFlashcardLabel.textContent = t('modeFlashcard');
+
+    if (els.searchInput) els.searchInput.placeholder = t('searchPlaceholder');
+    if (els.themeToggle) els.themeToggle.title = t('themeToggleTitle');
+    if (els.exportDatasetBtn) els.exportDatasetBtn.title = t('exportBtnTitle');
+    if (els.resetProgressBtn) els.resetProgressBtn.title = t('resetBtnTitle');
+
+    // Update Top Stats Labels
+    const statCorrectLabel = document.getElementById('statCorrectLabel');
+    if (statCorrectLabel) statCorrectLabel.textContent = t('statCorrect');
+    const statIncorrectLabel = document.getElementById('statIncorrectLabel');
+    if (statIncorrectLabel) statIncorrectLabel.textContent = t('statIncorrect');
+    const statFlaggedLabel = document.getElementById('statFlaggedLabel');
+    if (statFlaggedLabel) statFlaggedLabel.textContent = t('statFlagged');
+
+    // Update Question Card Actions
+    const editAnswerBtnLabel = document.getElementById('editAnswerBtnLabel');
+    if (editAnswerBtnLabel) editAnswerBtnLabel.textContent = t('editAnswerBtn');
+
+    if (els.prevBtn) els.prevBtn.textContent = t('prevBtn');
+    if (els.nextBtn) els.nextBtn.textContent = t('nextBtn');
+    if (els.flipBtn) els.flipBtn.textContent = t('flipBtn');
+
+    // Update Exam Intro
+    const examIntroBadge = document.getElementById('examIntroBadge');
+    if (examIntroBadge) examIntroBadge.textContent = t('examIntroBadge');
+    const examIntroTitle = document.getElementById('examIntroTitle');
+    if (examIntroTitle) examIntroTitle.textContent = t('examIntroTitle');
+    const examIntroDesc = document.getElementById('examIntroDesc');
+    if (examIntroDesc) examIntroDesc.textContent = t('examIntroDesc');
+
+    const rule60Q_title = document.getElementById('rule60Q_title');
+    if (rule60Q_title) rule60Q_title.textContent = t('rule60Q_title');
+    const rule60Q_desc = document.getElementById('rule60Q_desc');
+    if (rule60Q_desc) rule60Q_desc.textContent = t('rule60Q_desc');
+
+    const rule90M_title = document.getElementById('rule90M_title');
+    if (rule90M_title) rule90M_title.textContent = t('rule90M_title');
+    const rule90M_desc = document.getElementById('rule90M_desc');
+    if (rule90M_desc) rule90M_desc.textContent = t('rule90M_desc');
+
+    const rule75P_title = document.getElementById('rule75P_title');
+    if (rule75P_title) rule75P_title.textContent = t('rule75P_title');
+    const rule75P_desc = document.getElementById('rule75P_desc');
+    if (rule75P_desc) rule75P_desc.textContent = t('rule75P_desc');
+
+    const ruleLock_title = document.getElementById('ruleLock_title');
+    if (ruleLock_title) ruleLock_title.textContent = t('ruleLock_title');
+    const ruleLock_desc = document.getElementById('ruleLock_desc');
+    if (ruleLock_desc) ruleLock_desc.textContent = t('ruleLock_desc');
+
+    const distBlueprintTitle = document.getElementById('distBlueprintTitle');
+    if (distBlueprintTitle) distBlueprintTitle.textContent = t('distBlueprintTitle');
+    const distTotalBadge = document.getElementById('distTotalBadge');
+    if (distTotalBadge) distTotalBadge.textContent = t('distTotalBadge');
+
+    const domain1_name = document.getElementById('domain1_name');
+    if (domain1_name) domain1_name.textContent = t('domain1_name');
+    const domain2_name = document.getElementById('domain2_name');
+    if (domain2_name) domain2_name.textContent = t('domain2_name');
+    const domain3_name = document.getElementById('domain3_name');
+    if (domain3_name) domain3_name.textContent = t('domain3_name');
+    const domain4_name = document.getElementById('domain4_name');
+    if (domain4_name) domain4_name.textContent = t('domain4_name');
+    const domain5_name = document.getElementById('domain5_name');
+    if (domain5_name) domain5_name.textContent = t('domain5_name');
+
+    if (els.startExamBtn) els.startExamBtn.textContent = t('startExamBtn');
+
+    const fcHintFront = document.getElementById('fcHintFront');
+    if (fcHintFront) fcHintFront.textContent = t('fcHintFront');
+    const fcHintBack = document.getElementById('fcHintBack');
+    if (fcHintBack) fcHintBack.textContent = t('fcHintBack');
+
+    // Sidebar
+    const sidebarCatFilterTitle = document.getElementById('sidebarCatFilterTitle');
+    if (sidebarCatFilterTitle) sidebarCatFilterTitle.textContent = t('sidebarCatFilterTitle');
+
+    const filterPillAll = document.getElementById('filterPillAll');
+    if (filterPillAll) filterPillAll.textContent = t('filterAll');
+    const filterPillUnanswered = document.getElementById('filterPillUnanswered');
+    if (filterPillUnanswered) filterPillUnanswered.textContent = t('filterUnanswered');
+    const filterPillIncorrect = document.getElementById('filterPillIncorrect');
+    if (filterPillIncorrect) filterPillIncorrect.textContent = t('filterIncorrect');
+    const filterPillFlagged = document.getElementById('filterPillFlagged');
+    if (filterPillFlagged) filterPillFlagged.textContent = t('filterFlagged');
+
+    const sidebarGridTitle = document.getElementById('sidebarGridTitle');
+    if (sidebarGridTitle) sidebarGridTitle.textContent = t('sidebarGridTitle');
+    if (els.submitExamBtn) els.submitExamBtn.textContent = t('submitExamBtn');
+
+    const shortcutsTitle = document.getElementById('shortcutsTitle');
+    if (shortcutsTitle) shortcutsTitle.textContent = t('shortcutsTitle');
+    const shortcut1_label = document.getElementById('shortcut1_label');
+    if (shortcut1_label) shortcut1_label.textContent = t('shortcut1');
+    const shortcut2_label = document.getElementById('shortcut2_label');
+    if (shortcut2_label) shortcut2_label.textContent = t('shortcut2');
+    const shortcut3_label = document.getElementById('shortcut3_label');
+    if (shortcut3_label) shortcut3_label.textContent = t('shortcut3');
+    const shortcut4_label = document.getElementById('shortcut4_label');
+    if (shortcut4_label) shortcut4_label.textContent = t('shortcut4');
+
+    // Modals
+    if (els.modalTitle) els.modalTitle.textContent = t('resultsModalTitle');
+    const scoreLabel = document.getElementById('scoreLabel');
+    if (scoreLabel) scoreLabel.textContent = t('finalScore');
+    const topicBreakdownTitle = document.getElementById('topicBreakdownTitle');
+    if (topicBreakdownTitle) topicBreakdownTitle.textContent = t('topicBreakdownTitle');
+    if (els.reviewExamBtn) els.reviewExamBtn.textContent = t('reviewExamBtn');
+    if (els.retakeExamBtn) els.retakeExamBtn.textContent = t('retakeExamBtn');
+    if (els.backToPracticeBtn) els.backToPracticeBtn.textContent = t('backToPracticeBtn');
+
+    if (els.editModalTitle) els.editModalTitle.textContent = t('editModalTitle');
+    const formLabelQuestion = document.getElementById('formLabelQuestion');
+    if (formLabelQuestion) formLabelQuestion.textContent = t('formLabelQuestion');
+    const formLabelOptions = document.getElementById('formLabelOptions');
+    if (formLabelOptions) formLabelOptions.textContent = t('formLabelOptions');
+    const formSubLabelOptions = document.getElementById('formSubLabelOptions');
+    if (formSubLabelOptions) formSubLabelOptions.textContent = t('formSubLabelOptions');
+    const formLabelExplanation = document.getElementById('formLabelExplanation');
+    if (formLabelExplanation) formLabelExplanation.textContent = t('formLabelExplanation');
+    const formLabelNotes = document.getElementById('formLabelNotes');
+    if (formLabelNotes) formLabelNotes.textContent = t('formLabelNotes');
+    if (els.saveEditBtn) els.saveEditBtn.textContent = t('saveEditBtn');
+    if (els.restoreOriginalBtn) els.restoreOriginalBtn.textContent = t('restoreOriginalBtn');
+    if (els.cancelEditBtn) els.cancelEditBtn.textContent = t('cancelEditBtn');
+
+    populateCategories();
+    renderQuestion();
+    updateTopStats();
+    saveState();
+  }
+
   /* ==========================================================
      CATEGORIES & FILTER INITIALIZATION
      ========================================================== */
@@ -296,7 +663,7 @@
     const categories = Object.keys(categoryCounts).sort();
 
     // Build select dropdown
-    els.categorySelect.innerHTML = `<option value="ALL">All Categories (${state.allQuestions.length})</option>`;
+    els.categorySelect.innerHTML = `<option value="ALL">${t('allCategoriesOption', state.allQuestions.length)}</option>`;
     categories.forEach((cat) => {
       const opt = document.createElement('option');
       opt.value = cat;
@@ -403,8 +770,8 @@
 
     if (state.mode === 'exam') {
       if (!state.exam.active && !state.exam.submitted) {
-        els.progressText.textContent = 'Exam Ready (60 Questions)';
-        els.progressPercentage.textContent = '90 Minutes';
+        els.progressText.textContent = t('examReadyText');
+        els.progressPercentage.textContent = t('examDurationText');
         els.progressBarFill.style.width = '0%';
         els.statCorrect.textContent = '0';
         els.statIncorrect.textContent = '0';
@@ -456,13 +823,13 @@
 
     const currentList = getActiveQuestionList();
     const currDisplayIndex = currentList.length > 0 ? state.currentIndex + 1 : 0;
-    els.progressText.textContent = `Question ${currDisplayIndex} of ${currentList.length}`;
+    els.progressText.textContent = t('questionOf', currDisplayIndex, currentList.length);
 
     const percent =
       totalQuestions > 0
         ? Math.round((answeredCount / totalQuestions) * 100)
         : 0;
-    els.progressPercentage.textContent = `${percent}% Completed`;
+    els.progressPercentage.textContent = t('percentCompleted', percent);
     els.progressBarFill.style.width = `${percent}%`;
 
     els.statCorrect.textContent = correctCount;
@@ -483,9 +850,9 @@
       els.flashcardView.style.display = 'none';
       if (els.questionFooter) els.questionFooter.style.display = 'none';
 
-      els.catTag.textContent = 'Timed Exam';
+      els.catTag.textContent = state.lang === 'vi' ? 'Thi Thử' : 'Timed Exam';
       els.subcatTag.textContent = 'CCDAK Simulation';
-      els.qNumTag.textContent = '60 Questions';
+      els.qNumTag.textContent = state.lang === 'vi' ? '60 Câu Hỏi' : '60 Questions';
       els.multiBadge.style.display = 'none';
       if (els.editedBadge) els.editedBadge.style.display = 'none';
       els.flagBtn.style.display = 'none';
@@ -504,8 +871,8 @@
     if (!q || !list.length) {
       els.questionText.innerHTML = `
         <div style="text-align: center; padding: 2rem; color: var(--text-secondary);">
-          <p style="font-size: 1.25rem; margin-bottom: 0.5rem;">🔍 No questions match the current filter.</p>
-          <p style="font-size: 0.9rem;">Try selecting "All Categories" or resetting the status filter.</p>
+          <p style="font-size: 1.25rem; margin-bottom: 0.5rem;">${t('noMatchFilter')}</p>
+          <p style="font-size: 0.9rem;">${t('noMatchHint')}</p>
         </div>
       `;
       els.optionsList.innerHTML = '';
@@ -527,7 +894,7 @@
 
     if (q.isMultiSelect) {
       els.multiBadge.style.display = 'inline-block';
-      els.multiBadge.textContent = `Select ${q.answers.length} (${q.answers.length > 1 ? 'Multiple' : 'Single'})`;
+      els.multiBadge.textContent = t('selectMultipleBadge', q.answers.length);
     } else {
       els.multiBadge.style.display = 'none';
     }
@@ -535,11 +902,12 @@
     // Flag status
     const isFlagged = !!state.flaggedQuestions[q.id];
     els.flagBtn.classList.toggle('flagged', isFlagged);
-    els.flagText.textContent = isFlagged ? 'Flagged' : 'Flag';
+    els.flagText.textContent = isFlagged ? t('flaggedText') : t('flagText');
 
     // Custom Answer Badge
     if (els.editedBadge) {
       els.editedBadge.style.display = q.isCustom ? 'inline-block' : 'none';
+      els.editedBadge.textContent = t('customAnswerBadge');
     }
 
     // Flashcard vs Normal View
@@ -568,19 +936,22 @@
       if (els.retryBtn) els.retryBtn.style.display = 'none';
       if (els.clearAnswerBtn) {
         els.clearAnswerBtn.style.display = (!state.exam.submitted && userAnswers.length > 0) ? 'inline-flex' : 'none';
+        els.clearAnswerBtn.textContent = t('clearChoiceBtn');
       }
     } else {
       userAnswers = state.userAnswers[q.id] || [];
       isChecked = !!state.checkedQuestions[q.id];
       els.checkBtn.style.display = 'inline-flex';
       els.checkBtn.disabled = userAnswers.length === 0;
-      els.checkBtn.textContent = isChecked ? 'Re-Check' : 'Check Answer';
+      els.checkBtn.textContent = isChecked ? t('recheckBtn') : t('checkBtn');
 
       if (els.retryBtn) {
         els.retryBtn.style.display = isChecked ? 'inline-flex' : 'none';
+        els.retryBtn.textContent = t('retryBtn');
       }
       if (els.clearAnswerBtn) {
         els.clearAnswerBtn.style.display = userAnswers.length > 0 ? 'inline-flex' : 'none';
+        els.clearAnswerBtn.textContent = t('clearChoiceBtn');
       }
     }
 
@@ -638,22 +1009,22 @@
       if (isCorrect) {
         els.explanationStatus.innerHTML = `
           <span style="color: var(--success); font-size: 1.25rem;">✓</span>
-          <span style="color: var(--success); font-weight: 700;">Correct! Well done.</span>
+          <span style="color: var(--success); font-weight: 700;">${t('correctStatus')}</span>
         `;
       } else {
         els.explanationStatus.innerHTML = `
           <span style="color: var(--danger); font-size: 1.25rem;">✗</span>
-          <span style="color: var(--danger); font-weight: 700;">Incorrect. Review the concept below:</span>
+          <span style="color: var(--danger); font-weight: 700;">${t('incorrectStatus')}</span>
         `;
       }
 
-      els.correctAnswerBadge.textContent = `Correct Answer: ${q.answers.join(', ')}${q.isCustom ? ' (Custom)' : ''}`;
+      els.correctAnswerBadge.textContent = t('correctAnswerLabel', q.answers.join(', ')) + (q.isCustom ? ' (Custom)' : '');
       
       let explHtml = formatMarkdown(q.explanation);
       if (q.customNotes) {
         explHtml += `
           <div style="margin-top: 1rem; padding: 0.75rem 1rem; background: var(--bg-secondary); border-left: 3px solid var(--warning); border-radius: 6px;">
-            <div style="font-weight: 700; color: var(--warning); margin-bottom: 0.25rem;">📝 Personal Study Notes:</div>
+            <div style="font-weight: 700; color: var(--warning); margin-bottom: 0.25rem;">📝 ${state.lang === 'vi' ? 'Ghi chú cá nhân:' : 'Personal Study Notes:'}</div>
             <div>${formatMarkdown(q.customNotes)}</div>
           </div>
         `;
@@ -674,19 +1045,20 @@
     if (els.retryBtn) els.retryBtn.style.display = 'none';
     if (els.clearAnswerBtn) els.clearAnswerBtn.style.display = 'none';
     els.flipBtn.style.display = 'inline-flex';
+    els.flipBtn.textContent = t('flipBtn');
 
     // Reset flip
     els.flashcardInner.classList.remove('flipped');
 
     els.fcCategory.textContent = `${q.category} · Q${q.questionNumber || state.currentIndex + 1}${q.isCustom ? ' (Custom Answer)' : ''}`;
     els.fcQuestion.innerHTML = formatMarkdown(q.question);
-    els.fcAnswerBadge.textContent = `Correct Answer: ${q.answers.join(', ')}`;
+    els.fcAnswerBadge.textContent = t('fcAnswerLabel', q.answers.join(', '));
     
     let fcExplHtml = formatMarkdown(q.explanation);
     if (q.customNotes) {
       fcExplHtml += `
         <div style="margin-top: 0.75rem; padding: 0.5rem; background: var(--bg-primary); border-left: 3px solid var(--warning); border-radius: 4px; font-size: 0.85rem;">
-          <b style="color: var(--warning);">Note:</b> ${formatMarkdown(q.customNotes)}
+          <b style="color: var(--warning);">${state.lang === 'vi' ? 'Ghi chú:' : 'Note:'}</b> ${formatMarkdown(q.customNotes)}
         </div>
       `;
     }
@@ -947,9 +1319,7 @@
       const unanswered = state.exam.questions.length - answeredCount;
 
       if (unanswered > 0) {
-        const proceed = confirm(
-          `You have ${unanswered} unanswered question(s). Are you sure you want to finish and submit the exam?`
-        );
+        const proceed = confirm(t('confirmUnansweredSubmit', unanswered));
         if (!proceed) return;
       }
     }
@@ -998,7 +1368,7 @@
     const { score, percentage, passed, categoryStats, questions } = state.exam;
 
     els.scorePercent.textContent = `${percentage}%`;
-    els.passBadge.textContent = passed ? 'PASSED (≥ 75%)' : 'DID NOT PASS (< 75%)';
+    els.passBadge.textContent = passed ? t('passedBadge') : t('failedBadge');
     els.passBadge.className = `pass-badge ${passed ? 'passed' : 'failed'}`;
 
     els.modalScoreCircle.style.borderColor = passed
@@ -1008,7 +1378,7 @@
       ? 'var(--success-bg)'
       : 'var(--danger-bg)';
 
-    els.examSummaryText.textContent = `You scored ${score} out of ${questions.length} questions correctly. Confluent CCDAK requires a passing score of 75%.`;
+    els.examSummaryText.textContent = t('examSummary', score, questions.length);
 
     // Render Category Breakdown
     els.categoryBreakdown.innerHTML = '';
@@ -1050,9 +1420,7 @@
     if (state.mode === targetMode) return;
 
     if (state.mode === 'exam' && state.exam.active && !state.exam.submitted) {
-      const exitExam = confirm(
-        'You have an ongoing exam. Leaving exam mode will terminate your current session. Continue?'
-      );
+      const exitExam = confirm(t('confirmExitExam'));
       if (!exitExam) return;
       if (state.exam.timerInterval) {
         clearInterval(state.exam.timerInterval);
@@ -1090,9 +1458,7 @@
      RESET USER PROGRESS
      ========================================================== */
   function resetAllProgress() {
-    const confirmed = confirm(
-      'Are you sure you want to reset all your answers, checked questions, and flagged bookmarks?'
-    );
+    const confirmed = confirm(t('confirmResetProgress'));
     if (!confirmed) return;
 
     state.userAnswers = {};
@@ -1100,7 +1466,7 @@
     state.flaggedQuestions = {};
     saveState();
     applyFilters();
-    alert('All practice progress has been reset.');
+    alert(t('resetSuccessAlert'));
   }
 
   /* ==========================================================
@@ -1263,7 +1629,7 @@
     ).map((cb) => cb.value);
 
     if (selectedAnswers.length === 0) {
-      alert('Please check at least one option as the correct answer.');
+      alert(state.lang === 'vi' ? 'Vui lòng chọn ít nhất một đáp án đúng.' : 'Please check at least one option as the correct answer.');
       return;
     }
 
@@ -1305,9 +1671,9 @@
     // Sync to disk
     persistQuestionToDisk(q).then((persisted) => {
       if (persisted) {
-        showToast('Saved to questions.json on disk! 💾');
+        showToast(t('savedToDiskToast'));
       } else {
-        showToast('Saved in browser. (Run server.py or click 📥 to export to file).');
+        showToast(t('savedToBrowserToast'));
       }
     });
   }
@@ -1318,15 +1684,11 @@
 
     const orig = state.originalQuestionsMap[q.id];
     if (!orig && !q.isCustom) {
-      alert('This question already has its original question bank values.');
+      alert(state.lang === 'vi' ? 'Câu hỏi này đã ở trạng thái gốc ban đầu.' : 'This question already has its original question bank values.');
       return;
     }
 
-    if (
-      !confirm(
-        'Revert this question back to the original question bank answer and explanation?'
-      )
-    ) {
+    if (!confirm(t('revertPrompt'))) {
       return;
     }
 
@@ -1359,6 +1721,14 @@
      EVENT LISTENERS & BINDINGS
      ========================================================== */
   function setupEventListeners() {
+    // Language Switcher
+    if (els.langToggle) {
+      els.langToggle.addEventListener('click', () => {
+        const nextLang = state.lang === 'vi' ? 'en' : 'vi';
+        applyLanguage(nextLang);
+      });
+    }
+
     // Mode Switchers
     els.modePractice.addEventListener('click', () => switchMode('practice'));
     els.modeExam.addEventListener('click', () => switchMode('exam'));
