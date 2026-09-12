@@ -43,23 +43,27 @@ An interactive practice test and exam simulator built from 330 real Confluent Ce
 
 ---
 
-## How to Run
+## How to Run & Deploy
 
-### Option 1: Double-Click Launcher (Windows)
-Double-click `start.bat`. It will start the local server and automatically open the application in your default web browser.
+### Option 1: GitHub Pages (Online)
+This repository includes a ready-to-use GitHub Actions workflow (`.github/workflows/deploy-pages.yml`) for instant zero-config deployment:
+1. Push your changes to GitHub.
+2. In your repository on GitHub, go to **Settings** > **Pages**.
+3. Under **Build and deployment** > **Source**, select **GitHub Actions**.
+4. The workflow will automatically publish the practice test to `https://<your-username>.github.io/<repo-name>/`.
 
-### Option 2: Python HTTP Server
-Run the following command in PowerShell / Terminal:
-```powershell
-python server.py
+### Option 2: Direct File Opening (No Server Required)
+Simply open `index.html` in any web browser (Chrome, Edge, Firefox, Safari).
+
+### Option 3: Python Local HTTP Server
+Run the following command in your terminal:
+```bash
+python3 server.py
 ```
 Then visit [http://localhost:3000](http://localhost:3000).
 
-### Option 3: Direct File Opening (No Server Required)
-Simply double-click `index.html` or open it in any modern browser (Chrome, Edge, Firefox, Brave):
-```
-C:\Users\ducanh\Downloads\kafka\ccdak-practice-test\index.html
-```
+### Option 4: Double-Click Launcher (Windows)
+Double-click `start.bat` to launch the local server and open your default browser.
 
 ---
 

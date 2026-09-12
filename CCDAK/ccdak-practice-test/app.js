@@ -1151,8 +1151,16 @@
     }, 4000);
   }
 
-  // Persist edits directly to questions.json on disk via server.py
+  // Persist edits directly to questions.json on disk via server.py (local environment only)
   async function persistQuestionToDisk(q) {
+    // If running in purely static hosting (e.g. GitHub Pages or file protocol), skip server API request
+    if (
+      window.location.protocol === 'file:' ||
+      (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1')
+    ) {
+      return false;
+    }
+
     const payload = {
       id: q.id,
       answers: q.answers,
