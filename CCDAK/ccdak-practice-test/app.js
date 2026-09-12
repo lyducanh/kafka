@@ -1828,45 +1828,55 @@
     state.currentIndex = 0;
 
     // Update active tab buttons
-    els.modeButtons.forEach((btn) => {
+    document.querySelectorAll('.mode-btn').forEach((btn) => {
       btn.classList.toggle('active', btn.dataset.mode === targetMode);
     });
 
+    const questionCard = els.questionCard || document.getElementById('questionCard');
+    const sidebar = els.sidebar || document.querySelector('.sidebar');
+    const topStatsBar = els.topStatsBar || document.querySelector('.top-stats-bar');
+    const blogContainer = els.blogContainer || document.getElementById('blogContainer');
+    const visualizerContainer = els.visualizerContainer || document.getElementById('visualizerContainer');
+
     if (targetMode === 'blog') {
-      els.questionCard.style.display = 'none';
-      if (els.sidebar) els.sidebar.style.display = 'none';
-      if (els.topStatsBar) els.topStatsBar.style.display = 'none';
-      if (els.blogContainer) els.blogContainer.style.display = 'block';
-      if (els.visualizerContainer) els.visualizerContainer.style.display = 'none';
+      if (questionCard) questionCard.style.display = 'none';
+      if (sidebar) sidebar.style.display = 'none';
+      if (topStatsBar) topStatsBar.style.display = 'none';
+      if (visualizerContainer) visualizerContainer.style.display = 'none';
+      if (blogContainer) blogContainer.style.display = 'block';
       renderBlogListView();
     } else if (targetMode === 'visualizer') {
-      els.questionCard.style.display = 'none';
-      if (els.sidebar) els.sidebar.style.display = 'none';
-      if (els.topStatsBar) els.topStatsBar.style.display = 'none';
-      if (els.blogContainer) els.blogContainer.style.display = 'none';
-      if (els.visualizerContainer) els.visualizerContainer.style.display = 'block';
-      if (window.KafkaViz) window.KafkaViz.render();
+      if (questionCard) questionCard.style.display = 'none';
+      if (sidebar) sidebar.style.display = 'none';
+      if (topStatsBar) topStatsBar.style.display = 'none';
+      if (blogContainer) blogContainer.style.display = 'none';
+      if (visualizerContainer) {
+        visualizerContainer.style.display = 'block';
+      }
+      if (window.KafkaViz) {
+        window.KafkaViz.render();
+      }
     } else {
-      els.questionCard.style.display = 'block';
-      if (els.sidebar) els.sidebar.style.display = 'block';
-      if (els.topStatsBar) els.topStatsBar.style.display = 'flex';
-      if (els.blogContainer) els.blogContainer.style.display = 'none';
-      if (els.visualizerContainer) els.visualizerContainer.style.display = 'none';
+      if (questionCard) questionCard.style.display = 'block';
+      if (sidebar) sidebar.style.display = 'block';
+      if (topStatsBar) topStatsBar.style.display = 'flex';
+      if (blogContainer) blogContainer.style.display = 'none';
+      if (visualizerContainer) visualizerContainer.style.display = 'none';
 
       if (targetMode === 'exam') {
         if (state.exam.active || state.exam.submitted) {
-          els.timerBadge.style.display = state.exam.active ? 'inline-flex' : 'none';
-          els.examSubmitBox.style.display = state.exam.active ? 'block' : 'none';
+          if (els.timerBadge) els.timerBadge.style.display = state.exam.active ? 'inline-flex' : 'none';
+          if (els.examSubmitBox) els.examSubmitBox.style.display = state.exam.active ? 'block' : 'none';
         } else {
-          els.timerBadge.style.display = 'none';
-          els.examSubmitBox.style.display = 'none';
+          if (els.timerBadge) els.timerBadge.style.display = 'none';
+          if (els.examSubmitBox) els.examSubmitBox.style.display = 'none';
         }
         renderQuestion();
         renderQuestionGrid();
         updateTopStats();
       } else {
-        els.timerBadge.style.display = 'none';
-        els.examSubmitBox.style.display = 'none';
+        if (els.timerBadge) els.timerBadge.style.display = 'none';
+        if (els.examSubmitBox) els.examSubmitBox.style.display = 'none';
         applyFilters();
       }
     }
@@ -2154,11 +2164,13 @@
       });
     }
 
-    if (els.modePractice) els.modePractice.addEventListener('click', () => switchMode('practice'));
-    if (els.modeExam) els.modeExam.addEventListener('click', () => switchMode('exam'));
-    if (els.modeFlashcard) els.modeFlashcard.addEventListener('click', () => switchMode('flashcard'));
-    if (els.modeBlog) els.modeBlog.addEventListener('click', () => switchMode('blog'));
-    if (els.modeVisualizer) els.modeVisualizer.addEventListener('click', () => switchMode('visualizer'));
+    // Mode Switchers
+    document.querySelectorAll('.mode-btn').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const mode = btn.dataset.mode || btn.getAttribute('data-mode');
+        if (mode) switchMode(mode);
+      });
+    });
 
     // Blog Navigation & Search
     if (els.backToBlogListBtn) {
