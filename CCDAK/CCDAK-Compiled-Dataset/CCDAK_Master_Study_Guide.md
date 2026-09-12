@@ -1910,6 +1910,9 @@ There are two consumers C1 and C2 belonging to the same group G subscribed to to
 > 
 > **Explanation:**
 > With the Range Assignor, each consumer will be assigned a contiguous range of partitions from each topic. In this case, with 4 partitions per topic and 2 consumers, each consumer will get 2 partitions from each topic.
+>
+> 📝 **Personal Study Notes:**
+> *- carefully read round robind and range assignor*
 
 </details>
 
@@ -1978,6 +1981,9 @@ There are three consumers C1, C2, C3 belonging to the same group G subscribed to
 > 
 > - A, C are not correct because they involve unnecessary partition movement.
 > - D is incorrect because the partitions from the leaving consumer will be reassigned, not left unassigned.
+>
+> 📝 **Personal Study Notes:**
+> *- sticky assignor not static group*
 
 </details>
 
@@ -2011,6 +2017,9 @@ A Kafka Streams application tries to consume from an input topic partition. It r
 > - B is not recommended because resetting to the latest offset will skip over the missing data.
 > - C is too extreme. The error can be handled without shutting down the entire application.
 > - D will lead to data loss as the partition with the error will be ignored.
+>
+> 📝 **Personal Study Notes:**
+> *- just for handle unprocessing message*
 
 </details>
 
@@ -2257,6 +2266,9 @@ What happens when a new consumer joins an existing consumer group?
 > Statement B is incorrect because the new consumer will not start from the latest available offset unless it is explicitly configured to do so (e.g., by setting `auto.offset.reset=latest`).
 > 
 > Statement D is incorrect because the new consumer will not wait until the next rebalance. The joining of a new consumer itself triggers a rebalance, and the consumer starts consuming immediately after the rebalance completes.
+>
+> 📝 **Personal Study Notes:**
+> *- already rebalance*
 
 </details>
 
@@ -2340,6 +2352,16 @@ What is the default behavior of the auto.offset.reset configuration in Kafka con
 > It's important to carefully consider the appropriate value for auto.offset.reset based on your application's requirements. Setting it to "earliest" may result in reprocessing messages, while setting it to "latest" may skip messages that were produced before the consumer started.
 > 
 > If you want to avoid exceptions and have more control over the starting offset, you can use the Kafka consumer's seek() method to manually set the offset before starting consumption.
+>
+> 📝 **Personal Study Notes:**
+> *- book *
+> *The default is “latest,” which means that lacking a*
+> *valid offset, the consumer will start reading from the*
+> *newest records*
+> *- none *
+> *Setting auto.offset.reset to none will cause an*
+> *exception to be thrown when attempting to consume from*
+> *an invalid offset.*
 
 </details>
 
@@ -2381,6 +2403,9 @@ What happens when a Kafka consumer with enable.auto.commit set to false calls th
 > It's important to note that commitSync() is a blocking call, meaning that the consumer will wait for the Kafka broker to respond before proceeding with further message processing. This can impact the throughput of the consumer, especially if commits are performed frequently.
 > 
 > - A. alternative to commitSync() is commitAsync(), which sends the commit request asynchronously and allows the consumer to continue processing messages without waiting for the commit response. However, with commitAsync(), the consumer needs to handle the commit callback to check for any commit failures.
+>
+> 📝 **Personal Study Notes:**
+> *- Question not too clearly, when commit offfset, consumer commited the next lastest offset messages, for example pool offset ( 1,2,3,4) the commit offset is 5, to define the processed or not need to based on specific logic code*
 
 </details>
 

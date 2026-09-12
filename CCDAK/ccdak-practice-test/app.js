@@ -673,6 +673,24 @@
   }
 
   /* ==========================================================
+     LANGUAGE-AWARE QUESTION ACCESSORS
+     ========================================================== */
+  function getQuestionPrompt(q) {
+    if (!q) return '';
+    return (state.lang === 'vi' && q.question_vi) ? q.question_vi : q.question;
+  }
+
+  function getOptionText(opt) {
+    if (!opt) return '';
+    return (state.lang === 'vi' && opt.text_vi) ? opt.text_vi : opt.text;
+  }
+
+  function getExplanationText(q) {
+    if (!q) return '';
+    return (state.lang === 'vi' && q.explanation_vi) ? q.explanation_vi : q.explanation;
+  }
+
+  /* ==========================================================
      FILTERING & QUESTION SELECTION
      ========================================================== */
   function getActiveQuestionList() {
@@ -732,12 +750,15 @@
         return false;
       }
 
-      // 3. Search Query
+      // 3. Search Query (supports both EN & VI)
       if (query) {
-        const textMatch = q.question.toLowerCase().includes(query);
-        const explMatch = q.explanation.toLowerCase().includes(query);
+        const textMatch = (q.question && q.question.toLowerCase().includes(query)) ||
+          (q.question_vi && q.question_vi.toLowerCase().includes(query));
+        const explMatch = (q.explanation && q.explanation.toLowerCase().includes(query)) ||
+          (q.explanation_vi && q.explanation_vi.toLowerCase().includes(query));
         const optMatch = q.options.some((o) =>
-          o.text.toLowerCase().includes(query)
+          (o.text && o.text.toLowerCase().includes(query)) ||
+          (o.text_vi && o.text_vi.toLowerCase().includes(query))
         );
         const subcatMatch = (q.subcategory || '').toLowerCase().includes(query);
         if (!textMatch && !explMatch && !optMatch && !subcatMatch) {
@@ -922,7 +943,7 @@
     els.flipBtn.style.display = 'none';
 
     // Question Prompt
-    els.questionText.innerHTML = formatMarkdown(q.question);
+    els.questionText.innerHTML = formatMarkdown(getQuestionPrompt(q));
 
     // Answer retrieval based on mode
     let userAnswers = [];
@@ -982,7 +1003,7 @@
 
       const optText = document.createElement('div');
       optText.className = 'option-text';
-      optText.innerHTML = formatMarkdown(opt.text);
+      optText.innerHTML = formatMarkdown(getOptionText(opt));
 
       item.appendChild(indicator);
       item.appendChild(optText);
@@ -1020,7 +1041,7 @@
 
       els.correctAnswerBadge.textContent = t('correctAnswerLabel', q.answers.join(', ')) + (q.isCustom ? ' (Custom)' : '');
       
-      let explHtml = formatMarkdown(q.explanation);
+      let explHtml = formatMarkdown(getExplanationText(q));
       if (q.customNotes) {
         explHtml += `
           <div style="margin-top: 1rem; padding: 0.75rem 1rem; background: var(--bg-secondary); border-left: 3px solid var(--warning); border-radius: 6px;">
@@ -1051,10 +1072,10 @@
     els.flashcardInner.classList.remove('flipped');
 
     els.fcCategory.textContent = `${q.category} · Q${q.questionNumber || state.currentIndex + 1}${q.isCustom ? ' (Custom Answer)' : ''}`;
-    els.fcQuestion.innerHTML = formatMarkdown(q.question);
+    els.fcQuestion.innerHTML = formatMarkdown(getQuestionPrompt(q));
     els.fcAnswerBadge.textContent = t('fcAnswerLabel', q.answers.join(', '));
     
-    let fcExplHtml = formatMarkdown(q.explanation);
+    let fcExplHtml = formatMarkdown(getExplanationText(q));
     if (q.customNotes) {
       fcExplHtml += `
         <div style="margin-top: 0.75rem; padding: 0.5rem; background: var(--bg-primary); border-left: 3px solid var(--warning); border-radius: 4px; font-size: 0.85rem;">
@@ -1501,8 +1522,8 @@
 
     els.editMetaTag.textContent = `${q.category} · Q${q.questionNumber || state.currentIndex + 1}`;
     els.editQuestionId.textContent = `[ID: ${q.id}]`;
-    els.editQuestionPreview.innerHTML = formatMarkdown(q.question);
-    els.editExplanationInput.value = q.explanation;
+    els.editQuestionPreview.innerHTML = formatMarkdown(getQuestionPrompt(q));
+    els.editExplanationInput.value = getExplanationText(q);
     els.editNotesInput.value = q.personalNotes || q.customNotes || '';
 
     // Render options checkboxes
@@ -1528,7 +1549,7 @@
       const optText = document.createElement('span');
       optText.style.flex = '1';
       optText.style.fontSize = '0.9rem';
-      optText.innerHTML = formatMarkdown(opt.text);
+      optText.innerHTML = formatMarkdown(getOptionText(opt));
 
       label.appendChild(cb);
       label.appendChild(optBadge);
@@ -1633,7 +1654,7 @@
       return;
     }
 
-    const newExplanation = els.editExplanationInput.value.trim() || q.explanation;
+    const newExplanation = els.editExplanationInput.value.trim() || getExplanationText(q);
     const newNotes = els.editNotesInput.value.trim();
 
     // Ensure original is saved
@@ -1641,13 +1662,18 @@
       state.originalQuestionsMap[q.id] = {
         answers: [...q.answers],
         explanation: q.explanation,
+        explanation_vi: q.explanation_vi,
         isMultiSelect: q.isMultiSelect
       };
     }
 
     // Apply updates
     q.answers = selectedAnswers;
-    q.explanation = newExplanation;
+    if (state.lang === 'vi') {
+      q.explanation_vi = newExplanation;
+    } else {
+      q.explanation = newExplanation;
+    }
     q.personalNotes = newNotes;
     q.customNotes = newNotes;
     q.isCustom = true;
@@ -1655,7 +1681,8 @@
 
     state.customOverrides[q.id] = {
       answers: selectedAnswers,
-      explanation: newExplanation,
+      explanation: q.explanation,
+      explanation_vi: q.explanation_vi,
       notes: newNotes,
       personalNotes: newNotes,
       isCustom: true
@@ -1695,6 +1722,7 @@
     if (orig) {
       q.answers = [...orig.answers];
       q.explanation = orig.explanation;
+      if (orig.explanation_vi) q.explanation_vi = orig.explanation_vi;
       q.isMultiSelect = orig.isMultiSelect;
     }
     q.personalNotes = '';
