@@ -1,6 +1,6 @@
 /**
  * Kafka Visualizer - Interactive Simulator & Architecture Explorer
- * Powered by Anime.js Motion Path & Timeline Animation Engine
+ * Accurate 5-Phase Message Flow Engine with Anime.js Motion Paths
  * Inspired by SoftwareMill's Kafka Visualization
  */
 
@@ -14,11 +14,15 @@
       replicationFactor: 3,
       minInsyncReplicas: 2,
       controllerId: 1,
-      speed: 1,
+      speed: 1, // 0.6 (Slow/Clear), 1.0 (Normal), 1.6 (Fast)
       isRunningStream: false,
       streamIntervalId: null,
       isAnimating: false,
       currentScenario: 'basic',
+
+      // Step Debugger Phase State: 0=Idle, 1=ProducerSend, 2=LeaderAppend, 3=ISRReplication, 4=HWCommitAck, 5=ConsumerPollCommit
+      currentPhase: 0,
+      activePendingRecord: null,
 
       brokers: [
         { id: 1, online: true, isController: true },
@@ -51,8 +55,8 @@
       basic: {
         titleEn: '1. Basic Produce & Consume Flow',
         titleVi: '1. Luồng Gửi & Tiêu Thụ Cơ Bản (Basic Flow)',
-        descEn: 'Observe the Anime.js motion-path animated message packet traveling from Producer to Leader, followed by concurrent replication to ISR followers, High Watermark advancement, ACK return, and Consumer polling.',
-        descVi: 'Quan sát gói tin bay theo quỹ đạo cong Anime.js từ Producer tới Broker Leader, tiếp tục nhân bản sang các Follower trong ISR, High Watermark tiến lên, trả ACK và Consumer đọc bản ghi.'
+        descEn: 'Observe the 5-phase lifecycle: (1) Producer Send -> (2) Leader Append & LEO -> (3) ISR Replication -> (4) High Watermark Advance & Producer ACK -> (5) Consumer Poll & Offset Commit.',
+        descVi: 'Quan sát trọn vẹn 5 giai đoạn: (1) Producer gửi -> (2) Leader ghi & tăng LEO -> (3) Follower ISR sao chép -> (4) Tăng High Watermark & trả ACK -> (5) Consumer đọc & Commit offset.'
       },
       partitioning: {
         titleEn: '2. Key-based Partitioning (Ordering)',
@@ -130,6 +134,8 @@
         }
       ];
 
+      this.state.currentPhase = 0;
+      this.state.activePendingRecord = null;
       this.rebalanceGroup(this.state.consumerGroups[0]);
       this.state.logs = [];
       this.addLog('system', 'SYSTEM', `Kafka Cluster initialized (KRaft Mode, 3 Brokers, Topic: '${this.state.topic}', Partitions: ${this.state.numPartitions}, RF: ${this.state.replicationFactor}, min.insync.replicas: ${this.state.minInsyncReplicas})`);
@@ -169,6 +175,35 @@
         hash |= 0;
       }
       return Math.abs(hash) % this.state.numPartitions;
+    },
+
+    setLifecycleStep(stepNum, descriptionText) {
+      const isVi = document.documentElement.lang === 'vi' || (window.CURRENT_LANG && window.CURRENT_LANG === 'vi');
+      for (let i = 1; i <= 5; i++) {
+        const pill = document.getElementById(`stepPill-${i}`);
+        if (pill) {
+          pill.classList.remove('active', 'completed');
+          if (i < stepNum) {
+            pill.classList.add('completed');
+          } else if (i === stepNum) {
+            pill.classList.add('active');
+          }
+        }
+      }
+
+      const descEl = document.getElementById('vizLifecycleDesc');
+      if (descEl) {
+        descEl.innerHTML = descriptionText;
+        if (window.anime) {
+          window.anime({
+            targets: descEl,
+            opacity: [0.3, 1],
+            translateX: [-10, 0],
+            duration: 300,
+            easing: 'easeOutQuad'
+          });
+        }
+      }
     },
 
     /* ==========================================================
@@ -230,7 +265,7 @@
 
           const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
           const midY = (startY + endY) / 2;
-          const cp1X = startX + (endX > startX ? 40 : -40);
+          const cp1X = startX + (endX > startX ? 45 : -45);
           path.setAttribute('d', `M ${startX} ${startY} Q ${cp1X} ${midY}, ${endX} ${endY}`);
           path.setAttribute('class', 'viz-svg-path');
           path.id = `path-repl-p${part.id}-${part.leader}-to-${fId}`;
@@ -293,7 +328,8 @@
           svgPath.classList.add('active');
         }
 
-        const duration = (options.duration || 650) / this.state.speed;
+        // Pacing: Clear, observable speed (default ~900ms per phase)
+        const duration = (options.duration || 900) / this.state.speed;
 
         if (window.anime && svgPath) {
           const path = window.anime.path(svgPath);
@@ -304,7 +340,7 @@
             translateX: isReverse ? [path('x')(1), path('x')(0)] : path('x'),
             translateY: isReverse ? [path('y')(1), path('y')(0)] : path('y'),
             rotate: isReverse ? 0 : path('angle'),
-            scale: [0.8, 1.08, 1],
+            scale: [0.75, 1.1, 1],
             easing: 'easeInOutCubic',
             duration: duration,
             complete: () => {
@@ -333,7 +369,7 @@
               targets: packet,
               left: [`${startX}px`, `${endX}px`],
               top: [`${startY}px`, `${endY}px`],
-              scale: [0.8, 1.1, 1],
+              scale: [0.75, 1.1, 1],
               easing: 'easeInOutQuad',
               duration: duration,
               complete: () => {
@@ -354,11 +390,13 @@
     },
 
     /* ==========================================================
-       PRODUCE RECORD ANIMATION WITH ANIME.JS
+       CONCISE 5-PHASE MESSAGE LIFECYCLE (PRODUCER -> KAFKA -> CONSUMER)
        ========================================================== */
-    async produceRecord(producerId) {
+    async executeFullMessageCycle(producerId) {
       if (this.state.isAnimating) return;
       this.state.isAnimating = true;
+
+      const isVi = document.documentElement.lang === 'vi' || (window.CURRENT_LANG && window.CURRENT_LANG === 'vi');
 
       try {
         const producer = this.state.producers.find(p => p.id === producerId);
@@ -378,6 +416,7 @@
         if (!leaderBroker || !leaderBroker.online) {
           this.addLog('failover', producer.id, `ProduceRequest failed: Leader for Partition ${targetPartId} is OFFLINE (LeaderNotAvailableException)`);
           this.triggerFlashMessage(`❌ Produce failed: Leader for Partition ${targetPartId} is OFFLINE!`, 'error');
+          this.setLifecycleStep(0, isVi ? '❌ Thất bại: Broker Leader đang Offline!' : '❌ Failed: Partition Leader is Offline!');
           return;
         }
 
@@ -385,42 +424,57 @@
         if (producer.acks === 'all' && partition.isr.length < this.state.minInsyncReplicas) {
           this.addLog('failover', producer.id, `ProduceRequest rejected: ISR (${partition.isr.length}) < min.insync.replicas (${this.state.minInsyncReplicas}) -> NotEnoughReplicasException`);
           this.triggerFlashMessage(`❌ Rejected: ISR (${partition.isr.length}) < min.insync.replicas (${this.state.minInsyncReplicas})`, 'error');
+          this.setLifecycleStep(0, isVi ? `❌ Bị từ chối: ISR (${partition.isr.length}) < min.insync.replicas (${this.state.minInsyncReplicas})!` : `❌ Rejected: ISR count (${partition.isr.length}) < min.insync.replicas (${this.state.minInsyncReplicas})!`);
           return;
         }
 
         const prodEl = document.getElementById(`producer-${producer.id}`);
         const leaderPartEl = document.getElementById(`part-${partition.leader}-${partition.id}`);
+        const newOffset = partition.leo;
+
+        // -------------------------------------------------------------
+        // PHASE 1: PRODUCER SEND
+        // -------------------------------------------------------------
+        this.setLifecycleStep(1, isVi
+          ? `<strong>[Giai đoạn 1/5]</strong> Producer <code>${producer.id}</code> gửi bản ghi <code>[Key: ${producer.key}]</code> tới <strong>Broker ${leaderBroker.id} (Leader P${targetPartId})</strong>...`
+          : `<strong>[Phase 1/5]</strong> Producer <code>${producer.id}</code> sending record <code>[Key: ${producer.key}]</code> to <strong>Broker ${leaderBroker.id} (Leader Partition ${targetPartId})</strong>...`
+        );
+        this.addLog('producer', producer.id, `ProduceRequest -> Topic '${this.state.topic}', P${targetPartId}, Key='${producer.key}', Acks=${producer.acks}`);
 
         if (window.anime && prodEl) {
           window.anime({
             targets: prodEl,
-            scale: [1, 1.03, 1],
+            scale: [1, 1.04, 1],
             borderColor: ['var(--border-color)', '#6366f1', 'var(--border-color)'],
-            duration: 400
+            duration: 600
           });
         }
 
-        const newOffset = partition.leo;
-        this.addLog('producer', producer.id, `ProduceRequest -> Topic '${this.state.topic}', P${targetPartId}, Key='${producer.key}', Acks=${producer.acks}`);
-
-        // Phase 1: Animate Packet Producer -> Leader Partition along SVG Path
         const prodPathId = `path-prod-${producer.id}-part-${targetPartId}`;
         await this.animateFlightWithPath(prodPathId, {
           type: 'produce',
-          label: `✉️ P${targetPartId} [${producer.key}]`,
-          duration: 550,
+          label: `✉️ Record [P${targetPartId}: ${producer.key}]`,
+          duration: 950,
           fromEl: prodEl,
           toEl: leaderPartEl
         });
 
-        // Phase 2: Append uncommitted to leader log with spring pop
+        await this.sleep(300 / this.state.speed);
+
+        // -------------------------------------------------------------
+        // PHASE 2: LEADER APPEND & LEO INCREMENT (UNCOMMITTED)
+        // -------------------------------------------------------------
+        this.setLifecycleStep(2, isVi
+          ? `<strong>[Giai đoạn 2/5]</strong> Broker ${leaderBroker.id} (Leader) ghi bản ghi vào Log tại <strong>Offset #${newOffset}</strong>. Trạng thái: <em>Chưa commit (Uncommitted)</em>. LEO = ${newOffset + 1}, HW = ${partition.hw}.`
+          : `<strong>[Phase 2/5]</strong> Broker ${leaderBroker.id} (Leader) appended record at <strong>Offset #${newOffset}</strong>. Status: <em>Uncommitted</em>. LEO = ${newOffset + 1}, HW = ${partition.hw}.`
+        );
+
         const newRecord = {
           offset: newOffset,
           key: producer.key,
           val: producer.val,
           status: producer.acks === '0' ? 'committed' : 'uncommitted'
         };
-
         partition.records.push(newRecord);
         partition.leo = newOffset + 1;
 
@@ -429,13 +483,22 @@
         this.animateLogCellPop(`rec-${partition.id}-${newOffset}`);
         this.addLog('leader', `BROKER ${leaderBroker.id}`, `Leader P${targetPartId} appended record at offset ${newOffset} (LEO=${partition.leo})`);
 
-        // Phase 3: Concurrent Follower Replication with Anime.js
+        await this.sleep(500 / this.state.speed);
+
+        // -------------------------------------------------------------
+        // PHASE 3: ISR FOLLOWER REPLICATION
+        // -------------------------------------------------------------
         const onlineFollowers = partition.replicas.filter(rId => {
           const b = this.state.brokers.find(br => br.id === rId);
           return rId !== partition.leader && b && b.online;
         });
 
         if (onlineFollowers.length > 0) {
+          this.setLifecycleStep(3, isVi
+            ? `<strong>[Giai đoạn 3/5]</strong> Các Follower <strong>Broker [${onlineFollowers.join(', ')}]</strong> trong ISR sao chép bản ghi Offset #${newOffset} và gửi phản hồi (ACK) về Leader.`
+            : `<strong>[Phase 3/5]</strong> Follower brokers <strong>[${onlineFollowers.join(', ')}]</strong> in ISR replicate Offset #${newOffset} and send ACK back to Leader.`
+          );
+
           const replPromises = onlineFollowers.map(async fId => {
             const followerPartEl = document.getElementById(`part-${fId}-${partition.id}`);
             const followerBrokerEl = document.getElementById(`broker-${fId}`);
@@ -445,15 +508,15 @@
               window.anime({
                 targets: followerBrokerEl,
                 borderColor: ['var(--border-color)', '#06b6d4', 'var(--border-color)'],
-                duration: 600
+                duration: 700
               });
             }
 
             // Flight Leader -> Follower
             await this.animateFlightWithPath(replPathId, {
               type: 'replicate',
-              label: `🔄 Replicate (off:${newOffset})`,
-              duration: 480,
+              label: `🔄 Replicate (off:#${newOffset})`,
+              duration: 800,
               fromEl: leaderPartEl,
               toEl: followerPartEl
             });
@@ -463,8 +526,8 @@
             // Follower ACK -> Leader (reverse path)
             await this.animateFlightWithPath(replPathId, {
               type: 'ack',
-              label: `✓ ACK`,
-              duration: 350,
+              label: `✓ ACK Replicated`,
+              duration: 550,
               reverse: true,
               fromEl: followerPartEl,
               toEl: leaderPartEl
@@ -474,102 +537,90 @@
           await Promise.all(replPromises);
         }
 
-        // Phase 4: Advance High Watermark
+        await this.sleep(300 / this.state.speed);
+
+        // -------------------------------------------------------------
+        // PHASE 4: HIGH WATERMARK ADVANCE & PRODUCER ACK
+        // -------------------------------------------------------------
         if (partition.isr.length >= (producer.acks === 'all' ? this.state.minInsyncReplicas : 1)) {
           partition.hw = partition.leo;
           newRecord.status = 'committed';
-          this.addLog('isr', `PARTITION ${targetPartId}`, `All ISR [${partition.isr.join(',')}] in sync -> High Watermark advanced to ${partition.hw}`);
+          this.render();
+          this.addLog('isr', `PARTITION ${targetPartId}`, `All ISR [${partition.isr.join(',')}] caught up -> High Watermark advanced to ${partition.hw}`);
         }
 
-        // Phase 5: Return Producer ACK if acks != 0 along SVG path (reverse)
+        this.setLifecycleStep(4, isVi
+          ? `<strong>[Giai đoạn 4/5]</strong> Tất cả bản sao ISR đã đồng bộ -> <strong>High Watermark (HW) tiến lên ${partition.hw}</strong>. Bản ghi chuyển sang <strong>COMMITTED</strong>. Leader gửi ACK về Producer.`
+          : `<strong>[Phase 4/5]</strong> All ISR in sync -> <strong>High Watermark (HW) advanced to ${partition.hw}</strong>. Record is <strong>COMMITTED</strong>. Leader returns ACK to Producer.`
+        );
+
         if (producer.acks !== '0') {
           await this.animateFlightWithPath(prodPathId, {
             type: 'ack',
-            label: `✅ ACK (P${targetPartId}:${newOffset})`,
-            duration: 400,
+            label: `✅ ACK OK (P${targetPartId}:#${newOffset})`,
+            duration: 750,
             reverse: true,
             fromEl: leaderPartEl,
             toEl: prodEl
           });
         }
-
         this.addLog('producer', producer.id, `ProduceResponse -> ACK OK (Topic='${this.state.topic}', Partition=${targetPartId}, Offset=${newOffset})`);
-        this.render();
-      } finally {
-        this.state.isAnimating = false;
-      }
-    },
 
-    /* ==========================================================
-       CONSUME RECORD ANIMATION WITH ANIME.JS
-       ========================================================== */
-    async pollConsumer(groupId, consumerId) {
-      if (this.state.isAnimating) return;
-      this.state.isAnimating = true;
+        await this.sleep(500 / this.state.speed);
 
-      try {
-        const group = this.state.consumerGroups.find(g => g.id === groupId);
-        if (!group) return;
-        const consumer = group.consumers.find(c => c.id === consumerId);
-        if (!consumer || !consumer.online) return;
+        // -------------------------------------------------------------
+        // PHASE 5: CONSUMER POLL, DELIVER & COMMIT OFFSET
+        // -------------------------------------------------------------
+        const group = this.state.consumerGroups[0];
+        const assignedConsumer = group.consumers.find(c => c.online && c.assigned.includes(targetPartId));
 
-        if (consumer.assigned.length === 0) {
-          this.addLog('consumer', consumer.id, `Poll: No partitions assigned to this consumer.`);
-          return;
-        }
+        if (assignedConsumer) {
+          const consEl = document.getElementById(`consumer-${assignedConsumer.id}`);
+          const consPathId = `path-part-${targetPartId}-cons-${assignedConsumer.id}`;
 
-        const consEl = document.getElementById(`consumer-${consumer.id}`);
-        if (consEl && window.anime) {
-          window.anime({
-            targets: consEl,
-            scale: [1, 1.03, 1],
-            borderColor: ['var(--border-color)', '#10b981', 'var(--border-color)'],
-            duration: 500
-          });
-        }
+          this.setLifecycleStep(5, isVi
+            ? `<strong>[Giai đoạn 5/5]</strong> Consumer <code>${assignedConsumer.id}</code> gọi <code>poll()</code> -> Nhận bản ghi <strong>Offset #${newOffset}</strong> từ Leader và commit <strong>Offset #${newOffset + 1}</strong> vào <code>__consumer_offsets</code>.`
+            : `<strong>[Phase 5/5]</strong> Consumer <code>${assignedConsumer.id}</code> calls <code>poll()</code> -> Fetches <strong>Offset #${newOffset}</strong> from Leader and commits <strong>Offset #${newOffset + 1}</strong> to <code>__consumer_offsets</code>.`
+          );
 
-        let readAny = false;
-        for (const pId of consumer.assigned) {
-          const partition = this.state.partitions[pId];
-          const currentOffset = consumer.offsets[pId] || 0;
-
-          if (currentOffset < partition.hw) {
-            const rec = partition.records.find(r => r.offset === currentOffset);
-            if (rec) {
-              readAny = true;
-              const leaderPartEl = document.getElementById(`part-${partition.leader}-${partition.id}`);
-              const consPathId = `path-part-${pId}-cons-${consumer.id}`;
-
-              // Phase 1: Fetch Record Leader -> Consumer along SVG path
-              await this.animateFlightWithPath(consPathId, {
-                type: 'fetch',
-                label: `📥 P${pId}:${currentOffset} [${rec.key}]`,
-                duration: 520,
-                fromEl: leaderPartEl,
-                toEl: consEl
-              });
-
-              consumer.offsets[pId] = currentOffset + 1;
-              consumer.committed[pId] = currentOffset + 1;
-              this.addLog('consumer', `${group.id}:${consumer.id}`, `Fetched P${pId} Offset ${currentOffset} [Key='${rec.key}']`);
-
-              // Phase 2: Offset Commit Consumer -> Coordinator (reverse along SVG path)
-              await this.animateFlightWithPath(consPathId, {
-                type: 'commit',
-                label: `📌 Commit (P${pId}:${consumer.committed[pId]})`,
-                duration: 400,
-                reverse: true,
-                fromEl: consEl,
-                toEl: leaderPartEl
-              });
-
-              this.addLog('consumer', `${group.id}:${consumer.id}`, `OffsetCommitRequest P${pId} -> Committed offset ${consumer.committed[pId]} to __consumer_offsets`);
-            }
+          if (consEl && window.anime) {
+            window.anime({
+              targets: consEl,
+              scale: [1, 1.04, 1],
+              borderColor: ['var(--border-color)', '#10b981', 'var(--border-color)'],
+              duration: 700
+            });
           }
-        }
 
-        if (!readAny) {
-          this.addLog('consumer', `${group.id}:${consumer.id}`, `Poll: Caught up to High Watermark (No new records).`);
+          // Fetch Record Leader -> Consumer along SVG path
+          await this.animateFlightWithPath(consPathId, {
+            type: 'fetch',
+            label: `📥 Fetch (P${targetPartId}:#${newOffset})`,
+            duration: 850,
+            fromEl: leaderPartEl,
+            toEl: consEl
+          });
+
+          assignedConsumer.offsets[targetPartId] = newOffset + 1;
+          assignedConsumer.committed[targetPartId] = newOffset + 1;
+          this.addLog('consumer', `${group.id}:${assignedConsumer.id}`, `Fetched P${targetPartId} Offset ${newOffset} [Key='${newRecord.key}']`);
+
+          // Offset Commit Consumer -> Coordinator (reverse along SVG path)
+          await this.animateFlightWithPath(consPathId, {
+            type: 'commit',
+            label: `📌 Commit (P${targetPartId}:#${newOffset + 1})`,
+            duration: 650,
+            reverse: true,
+            fromEl: consEl,
+            toEl: leaderPartEl
+          });
+
+          this.addLog('consumer', `${group.id}:${assignedConsumer.id}`, `OffsetCommitRequest P${targetPartId} -> Committed offset ${assignedConsumer.committed[targetPartId]} to __consumer_offsets (Lag=0)`);
+        } else {
+          this.setLifecycleStep(5, isVi
+            ? `<strong>[Giai đoạn 5/5]</strong> Không có Consumer nào đang online được gán Partition ${targetPartId}. Bản ghi tồn tại trong log và sẵn sàng khi Consumer kết nối.`
+            : `<strong>[Phase 5/5]</strong> No active consumer assigned to Partition ${targetPartId}. Record remains stored in log ready for consumption.`
+          );
         }
 
         this.render();
@@ -584,10 +635,10 @@
         if (el) {
           window.anime({
             targets: el,
-            scale: [0.2, 1.15, 1],
+            scale: [0.1, 1.18, 1],
             opacity: [0, 1],
             easing: 'easeOutElastic(1, .7)',
-            duration: 450 / this.state.speed
+            duration: 500 / this.state.speed
           });
         }
       }
@@ -747,15 +798,8 @@
           this.state.producers[0].key = randKey;
           this.state.producers[0].val = JSON.stringify({ event: 'evt_' + Math.floor(Math.random() * 1000), ts: Date.now() });
 
-          await this.produceRecord(this.state.producers[0].id);
-
-          const group = this.state.consumerGroups[0];
-          const onlineConsumers = group.consumers.filter(c => c.online);
-          if (onlineConsumers.length > 0) {
-            const randConsumer = onlineConsumers[Math.floor(Math.random() * onlineConsumers.length)];
-            await this.pollConsumer(group.id, randConsumer.id);
-          }
-        }, 2600 / this.state.speed);
+          await this.executeFullMessageCycle(this.state.producers[0].id);
+        }, 5500 / this.state.speed);
       } else {
         if (btn) btn.innerHTML = '▶ <span id="vizStreamLabel">Start Stream</span>';
         if (this.state.streamIntervalId) {
@@ -766,12 +810,7 @@
     },
 
     async stepForward() {
-      await this.produceRecord(this.state.producers[0].id);
-      const group = this.state.consumerGroups[0];
-      const onlineConsumers = group.consumers.filter(c => c.online);
-      if (onlineConsumers.length > 0) {
-        await this.pollConsumer(group.id, onlineConsumers[0].id);
-      }
+      await this.executeFullMessageCycle(this.state.producers[0].id);
     },
 
     render() {
@@ -824,10 +863,10 @@
 
               <div class="viz-controls-group">
                 <button id="vizStreamToggleBtn" class="viz-btn primary">
-                  ${this.state.isRunningStream ? '⏸' : '▶'} <span>${this.state.isRunningStream ? (isVi ? 'Tạm Dừng Luồng' : 'Pause Stream') : (isVi ? 'Chạy Luồng Dữ Liệu' : 'Start Stream')}</span>
+                  ${this.state.isRunningStream ? '⏸' : '▶'} <span>${this.state.isRunningStream ? (isVi ? 'Tạm Dừng Luồng' : 'Pause Stream') : (isVi ? 'Chạy Tự Động (Stream)' : 'Auto Stream')}</span>
                 </button>
-                <button id="vizStepBtn" class="viz-btn" title="Step forward 1 operation">
-                  ⏭ <span>${isVi ? 'Từng Bước' : 'Step Debugger'}</span>
+                <button id="vizStepBtn" class="viz-btn" title="Step forward full 5-phase message cycle">
+                  ⏭ <span>${isVi ? 'Từng Bước (Step)' : 'Next Step'}</span>
                 </button>
                 <button id="vizResetBtn" class="viz-btn danger" title="Reset cluster">
                   🔄 <span>${isVi ? 'Đặt Lại' : 'Reset Cluster'}</span>
@@ -836,9 +875,9 @@
                 <div class="viz-speed-wrapper">
                   <span>⚡ ${isVi ? 'Tốc độ' : 'Speed'}:</span>
                   <select id="vizSpeedSelect" class="viz-form-select" style="padding: 0.25rem 0.5rem; font-size: 0.8rem;">
-                    <option value="0.5" ${this.state.speed === 0.5 ? 'selected' : ''}>0.5x</option>
-                    <option value="1" ${this.state.speed === 1 ? 'selected' : ''}>1.0x</option>
-                    <option value="2" ${this.state.speed === 2 ? 'selected' : ''}>2.0x</option>
+                    <option value="0.6" ${this.state.speed === 0.6 ? 'selected' : ''}>0.6x (${isVi ? 'Chậm & Chi tiết' : 'Slow / Educational'})</option>
+                    <option value="1" ${this.state.speed === 1 ? 'selected' : ''}>1.0x (${isVi ? 'Bình thường' : 'Normal'})</option>
+                    <option value="1.6" ${this.state.speed === 1.6 ? 'selected' : ''}>1.6x (${isVi ? 'Nhanh' : 'Fast'})</option>
                   </select>
                 </div>
               </div>
@@ -850,6 +889,24 @@
               <div>
                 <strong>${scTitle}</strong>: ${scDesc}
               </div>
+            </div>
+          </div>
+
+          <!-- Live 5-Phase Lifecycle Stepper HUD -->
+          <div class="viz-lifecycle-hud">
+            <div class="viz-stepper">
+              <div class="viz-step-pill" id="stepPill-1"><span class="step-num">1</span> <span class="step-label">${isVi ? 'Producer Gửi (Send)' : 'Producer Send'}</span></div>
+              <div class="viz-step-arrow">→</div>
+              <div class="viz-step-pill" id="stepPill-2"><span class="step-num">2</span> <span class="step-label">${isVi ? 'Leader Ghi Log (LEO)' : 'Leader Append (LEO)'}</span></div>
+              <div class="viz-step-arrow">→</div>
+              <div class="viz-step-pill" id="stepPill-3"><span class="step-num">3</span> <span class="step-label">${isVi ? 'Follower Sao Chép (ISR)' : 'ISR Replication'}</span></div>
+              <div class="viz-step-arrow">→</div>
+              <div class="viz-step-pill" id="stepPill-4"><span class="step-num">4</span> <span class="step-label">${isVi ? 'Tăng HW & Trả ACK' : 'HW Commit & ACK'}</span></div>
+              <div class="viz-step-arrow">→</div>
+              <div class="viz-step-pill" id="stepPill-5"><span class="step-num">5</span> <span class="step-label">${isVi ? 'Consumer Đọc & Commit' : 'Consumer Poll & Commit'}</span></div>
+            </div>
+            <div class="viz-lifecycle-desc" id="vizLifecycleDesc">
+              ${isVi ? 'Sẵn sàng. Nhấn "Gửi Bản Ghi" hoặc "Từng Bước" để theo dõi luồng tin nhắn chính xác qua từng giai đoạn.' : 'Ready. Click "Send Record" or "Next Step" to trace exact message delivery across all 5 phases.'}
             </div>
           </div>
 
@@ -922,7 +979,7 @@
                   </div>
 
                   <button class="viz-btn primary" onclick="KafkaViz.handleProduceClick('${p.id}')" style="margin-top: 0.35rem; justify-content: center;">
-                    📤 ${isVi ? 'Gửi Bản Ghi (Animate)' : 'Send Record (Animate)'}
+                    📤 ${isVi ? 'Gửi Bản Ghi (Animate Flow)' : 'Send Record (Animate Flow)'}
                   </button>
                 </div>
               `).join('')}
@@ -1048,8 +1105,8 @@
                           <span class="viz-lag-badge ${consumerLag === 0 ? 'zero' : 'has-lag'}">
                             Lag: ${consumerLag} msgs
                           </span>
-                          <button class="viz-btn success" style="padding: 0.2rem 0.6rem; font-size: 0.75rem;" onclick="KafkaViz.pollConsumer('${group.id}', '${c.id}')" ${!c.online || c.assigned.length === 0 ? 'disabled' : ''}>
-                            📥 ${isVi ? 'Đọc (Animate Poll)' : 'Poll (Animate)'}
+                          <button class="viz-btn success" style="padding: 0.2rem 0.6rem; font-size: 0.75rem;" onclick="KafkaViz.executeFullMessageCycle('P1')" ${!c.online || c.assigned.length === 0 ? 'disabled' : ''}>
+                            📥 ${isVi ? 'Đọc (Animate)' : 'Poll (Animate)'}
                           </button>
                         </div>
                       </div>
@@ -1142,7 +1199,7 @@
         if (acksSelect) producer.acks = acksSelect.value;
       }
 
-      this.produceRecord(producerId);
+      this.executeFullMessageCycle(producerId);
     },
 
     highlightNode(elementId) {
