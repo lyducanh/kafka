@@ -1,6 +1,7 @@
 /**
  * Kafka Visualizer - Interactive Simulator & Architecture Explorer
- * Accurate SoftwareMill-style Animation & Replicated Partition Engine
+ * Powered by Anime.js Motion Path & Timeline Animation Engine
+ * Inspired by SoftwareMill's Kafka Visualization
  */
 
 (function (window) {
@@ -50,8 +51,8 @@
       basic: {
         titleEn: '1. Basic Produce & Consume Flow',
         titleVi: '1. Luồng Gửi & Tiêu Thụ Cơ Bản (Basic Flow)',
-        descEn: 'Observe the animated message packet traveling from Producer to Leader, followed by concurrent replication to ISR followers, High Watermark advancement, ACK return, and Consumer polling.',
-        descVi: 'Quan sát gói tin bay từ Producer tới Broker Leader, tiếp tục nhân bản sang các Follower trong ISR, High Watermark tiến lên, trả ACK và Consumer đọc bản ghi.'
+        descEn: 'Observe the Anime.js motion-path animated message packet traveling from Producer to Leader, followed by concurrent replication to ISR followers, High Watermark advancement, ACK return, and Consumer polling.',
+        descVi: 'Quan sát gói tin bay theo quỹ đạo cong Anime.js từ Producer tới Broker Leader, tiếp tục nhân bản sang các Follower trong ISR, High Watermark tiến lên, trả ACK và Consumer đọc bản ghi.'
       },
       partitioning: {
         titleEn: '2. Key-based Partitioning (Ordering)',
@@ -171,7 +172,7 @@
     },
 
     /* ==========================================================
-       SVG PATH & FLIGHT ANIMATION ENGINE
+       SVG BEZIER PATH GENERATOR & ANIME.JS MOTION LAYER
        ========================================================== */
     drawConnectionCurves() {
       const svg = document.getElementById('vizSvgLayer');
@@ -184,7 +185,7 @@
       svg.setAttribute('viewBox', `0 0 ${stageRect.width} ${stageRect.height}`);
       svg.innerHTML = '';
 
-      // Producer to Leader Partitions
+      // 1. Producer -> Partition Leaders Curves
       this.state.producers.forEach(p => {
         const prodEl = document.getElementById(`producer-${p.id}`);
         if (!prodEl) return;
@@ -211,7 +212,33 @@
         });
       });
 
-      // Leader Partitions to Active Consumers
+      // 2. Intra-Cluster Replication Curves (Leader -> Followers)
+      Object.values(this.state.partitions).forEach(part => {
+        const leaderEl = document.getElementById(`part-${part.leader}-${part.id}`);
+        if (!leaderEl) return;
+        const lRect = leaderEl.getBoundingClientRect();
+        const startX = lRect.left + lRect.width / 2 - stageRect.left;
+        const startY = lRect.top + lRect.height / 2 - stageRect.top;
+
+        part.replicas.forEach(fId => {
+          if (fId === part.leader) return;
+          const followerEl = document.getElementById(`part-${fId}-${part.id}`);
+          if (!followerEl) return;
+          const fRect = followerEl.getBoundingClientRect();
+          const endX = fRect.left + fRect.width / 2 - stageRect.left;
+          const endY = fRect.top + fRect.height / 2 - stageRect.top;
+
+          const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+          const midY = (startY + endY) / 2;
+          const cp1X = startX + (endX > startX ? 40 : -40);
+          path.setAttribute('d', `M ${startX} ${startY} Q ${cp1X} ${midY}, ${endX} ${endY}`);
+          path.setAttribute('class', 'viz-svg-path');
+          path.id = `path-repl-p${part.id}-${part.leader}-to-${fId}`;
+          svg.appendChild(path);
+        });
+      });
+
+      // 3. Leader Partitions -> Active Assigned Consumers Curves
       this.state.consumerGroups.forEach(g => {
         g.consumers.forEach(c => {
           if (!c.online) return;
@@ -244,67 +271,90 @@
       });
     },
 
-    animateFlight(fromEl, toEl, options = {}) {
+    /* ==========================================================
+       ANIME.JS MOTION PATH FLIGHT DISPATCHER
+       ========================================================== */
+    animateFlightWithPath(svgPathId, options = {}) {
       return new Promise(resolve => {
-        if (!fromEl || !toEl) {
-          resolve();
-          return;
-        }
-
         const overlay = document.getElementById('vizPacketOverlay');
+        const svgPath = document.getElementById(svgPathId);
+
         if (!overlay) {
           resolve();
           return;
         }
 
-        const stage = document.querySelector('.viz-stage');
-        const stageRect = stage ? stage.getBoundingClientRect() : { left: 0, top: 0 };
-
-        const fromRect = fromEl.getBoundingClientRect();
-        const toRect = toEl.getBoundingClientRect();
-
-        const startX = fromRect.left + fromRect.width / 2 - stageRect.left;
-        const startY = fromRect.top + fromRect.height / 2 - stageRect.top;
-        const endX = toRect.left + toRect.width / 2 - stageRect.left;
-        const endY = toRect.top + toRect.height / 2 - stageRect.top;
-
         const packet = document.createElement('div');
         packet.className = `viz-flying-packet ${options.type || 'produce'}`;
         packet.innerHTML = options.label || '✉️';
-        packet.style.left = `${startX}px`;
-        packet.style.top = `${startY}px`;
-        packet.style.opacity = '1';
         overlay.appendChild(packet);
 
-        const duration = (options.duration || 600) / this.state.speed;
-        const startTime = performance.now();
-
-        function updateFrame(now) {
-          const elapsed = now - startTime;
-          const progress = Math.min(1, elapsed / duration);
-          // Ease-in-out cubic
-          const ease = progress < 0.5 ? 4 * progress * progress * progress : 1 - Math.pow(-2 * progress + 2, 3) / 2;
-
-          const curX = startX + (endX - startX) * ease;
-          const curY = startY + (endY - startY) * ease;
-
-          packet.style.left = `${curX}px`;
-          packet.style.top = `${curY}px`;
-
-          if (progress < 1) {
-            requestAnimationFrame(updateFrame);
-          } else {
-            packet.remove();
-            resolve();
-          }
+        if (svgPath) {
+          svgPath.classList.add('active');
         }
 
-        requestAnimationFrame(updateFrame);
+        const duration = (options.duration || 650) / this.state.speed;
+
+        if (window.anime && svgPath) {
+          const path = window.anime.path(svgPath);
+          const isReverse = !!options.reverse;
+
+          window.anime({
+            targets: packet,
+            translateX: isReverse ? [path('x')(1), path('x')(0)] : path('x'),
+            translateY: isReverse ? [path('y')(1), path('y')(0)] : path('y'),
+            rotate: isReverse ? 0 : path('angle'),
+            scale: [0.8, 1.08, 1],
+            easing: 'easeInOutCubic',
+            duration: duration,
+            complete: () => {
+              packet.remove();
+              if (svgPath) svgPath.classList.remove('active');
+              resolve();
+            }
+          });
+        } else {
+          // Fallback coordinate animation
+          const stage = document.querySelector('.viz-stage');
+          const stageRect = stage ? stage.getBoundingClientRect() : { left: 0, top: 0 };
+          const fromRect = options.fromEl ? options.fromEl.getBoundingClientRect() : { left: 0, top: 0, width: 0, height: 0 };
+          const toRect = options.toEl ? options.toEl.getBoundingClientRect() : { left: 100, top: 100, width: 0, height: 0 };
+
+          const startX = fromRect.left + fromRect.width / 2 - stageRect.left;
+          const startY = fromRect.top + fromRect.height / 2 - stageRect.top;
+          const endX = toRect.left + toRect.width / 2 - stageRect.left;
+          const endY = toRect.top + toRect.height / 2 - stageRect.top;
+
+          packet.style.left = `${startX}px`;
+          packet.style.top = `${startY}px`;
+
+          if (window.anime) {
+            window.anime({
+              targets: packet,
+              left: [`${startX}px`, `${endX}px`],
+              top: [`${startY}px`, `${endY}px`],
+              scale: [0.8, 1.1, 1],
+              easing: 'easeInOutQuad',
+              duration: duration,
+              complete: () => {
+                packet.remove();
+                if (svgPath) svgPath.classList.remove('active');
+                resolve();
+              }
+            });
+          } else {
+            setTimeout(() => {
+              packet.remove();
+              if (svgPath) svgPath.classList.remove('active');
+              resolve();
+            }, duration);
+          }
+        }
       });
     },
 
     /* ==========================================================
-       PRODUCE RECORD LIFECYCLE ANIMATION
+       PRODUCE RECORD ANIMATION WITH ANIME.JS
        ========================================================== */
     async produceRecord(producerId) {
       if (this.state.isAnimating) return;
@@ -340,21 +390,30 @@
 
         const prodEl = document.getElementById(`producer-${producer.id}`);
         const leaderPartEl = document.getElementById(`part-${partition.leader}-${partition.id}`);
-        if (prodEl) prodEl.classList.add('highlight-send');
+
+        if (window.anime && prodEl) {
+          window.anime({
+            targets: prodEl,
+            scale: [1, 1.03, 1],
+            borderColor: ['var(--border-color)', '#6366f1', 'var(--border-color)'],
+            duration: 400
+          });
+        }
 
         const newOffset = partition.leo;
         this.addLog('producer', producer.id, `ProduceRequest -> Topic '${this.state.topic}', P${targetPartId}, Key='${producer.key}', Acks=${producer.acks}`);
 
-        // Phase 1: Animate Packet Producer -> Leader Partition
-        await this.animateFlight(prodEl, leaderPartEl, {
+        // Phase 1: Animate Packet Producer -> Leader Partition along SVG Path
+        const prodPathId = `path-prod-${producer.id}-part-${targetPartId}`;
+        await this.animateFlightWithPath(prodPathId, {
           type: 'produce',
           label: `✉️ P${targetPartId} [${producer.key}]`,
-          duration: 550
+          duration: 550,
+          fromEl: prodEl,
+          toEl: leaderPartEl
         });
 
-        if (prodEl) prodEl.classList.remove('highlight-send');
-
-        // Phase 2: Append uncommitted to leader log
+        // Phase 2: Append uncommitted to leader log with spring pop
         const newRecord = {
           offset: newOffset,
           key: producer.key,
@@ -367,39 +426,49 @@
 
         this.highlightNode(`broker-${leaderBroker.id}`);
         this.render();
+        this.animateLogCellPop(`rec-${partition.id}-${newOffset}`);
         this.addLog('leader', `BROKER ${leaderBroker.id}`, `Leader P${targetPartId} appended record at offset ${newOffset} (LEO=${partition.leo})`);
 
-        // Phase 3: Concurrent Replication to Followers
+        // Phase 3: Concurrent Follower Replication with Anime.js
         const onlineFollowers = partition.replicas.filter(rId => {
           const b = this.state.brokers.find(br => br.id === rId);
           return rId !== partition.leader && b && b.online;
         });
 
         if (onlineFollowers.length > 0) {
-          const leaderElCurrent = document.getElementById(`part-${partition.leader}-${partition.id}`);
           const replPromises = onlineFollowers.map(async fId => {
             const followerPartEl = document.getElementById(`part-${fId}-${partition.id}`);
             const followerBrokerEl = document.getElementById(`broker-${fId}`);
+            const replPathId = `path-repl-p${partition.id}-${partition.leader}-to-${fId}`;
 
-            if (followerBrokerEl) followerBrokerEl.classList.add('highlight-replicate');
+            if (followerBrokerEl && window.anime) {
+              window.anime({
+                targets: followerBrokerEl,
+                borderColor: ['var(--border-color)', '#06b6d4', 'var(--border-color)'],
+                duration: 600
+              });
+            }
 
             // Flight Leader -> Follower
-            await this.animateFlight(leaderElCurrent, followerPartEl, {
+            await this.animateFlightWithPath(replPathId, {
               type: 'replicate',
               label: `🔄 Replicate (off:${newOffset})`,
-              duration: 500
+              duration: 480,
+              fromEl: leaderPartEl,
+              toEl: followerPartEl
             });
 
             this.addLog('isr', `BROKER ${fId}`, `Follower replicated P${targetPartId} offset ${newOffset}`);
 
-            // Follower ACK -> Leader
-            await this.animateFlight(followerPartEl, leaderElCurrent, {
+            // Follower ACK -> Leader (reverse path)
+            await this.animateFlightWithPath(replPathId, {
               type: 'ack',
               label: `✓ ACK`,
-              duration: 350
+              duration: 350,
+              reverse: true,
+              fromEl: followerPartEl,
+              toEl: leaderPartEl
             });
-
-            if (followerBrokerEl) followerBrokerEl.classList.remove('highlight-replicate');
           });
 
           await Promise.all(replPromises);
@@ -412,14 +481,15 @@
           this.addLog('isr', `PARTITION ${targetPartId}`, `All ISR [${partition.isr.join(',')}] in sync -> High Watermark advanced to ${partition.hw}`);
         }
 
-        // Phase 5: Return Producer ACK if acks != 0
+        // Phase 5: Return Producer ACK if acks != 0 along SVG path (reverse)
         if (producer.acks !== '0') {
-          const leaderElDone = document.getElementById(`part-${partition.leader}-${partition.id}`);
-          const prodElTarget = document.getElementById(`producer-${producer.id}`);
-          await this.animateFlight(leaderElDone, prodElTarget, {
+          await this.animateFlightWithPath(prodPathId, {
             type: 'ack',
             label: `✅ ACK (P${targetPartId}:${newOffset})`,
-            duration: 400
+            duration: 400,
+            reverse: true,
+            fromEl: leaderPartEl,
+            toEl: prodEl
           });
         }
 
@@ -431,7 +501,7 @@
     },
 
     /* ==========================================================
-       CONSUME RECORD LIFECYCLE ANIMATION
+       CONSUME RECORD ANIMATION WITH ANIME.JS
        ========================================================== */
     async pollConsumer(groupId, consumerId) {
       if (this.state.isAnimating) return;
@@ -449,7 +519,14 @@
         }
 
         const consEl = document.getElementById(`consumer-${consumer.id}`);
-        if (consEl) consEl.classList.add('highlight-poll');
+        if (consEl && window.anime) {
+          window.anime({
+            targets: consEl,
+            scale: [1, 1.03, 1],
+            borderColor: ['var(--border-color)', '#10b981', 'var(--border-color)'],
+            duration: 500
+          });
+        }
 
         let readAny = false;
         for (const pId of consumer.assigned) {
@@ -461,23 +538,29 @@
             if (rec) {
               readAny = true;
               const leaderPartEl = document.getElementById(`part-${partition.leader}-${partition.id}`);
+              const consPathId = `path-part-${pId}-cons-${consumer.id}`;
 
-              // Phase 1: Fetch Record Leader -> Consumer
-              await this.animateFlight(leaderPartEl, consEl, {
+              // Phase 1: Fetch Record Leader -> Consumer along SVG path
+              await this.animateFlightWithPath(consPathId, {
                 type: 'fetch',
                 label: `📥 P${pId}:${currentOffset} [${rec.key}]`,
-                duration: 500
+                duration: 520,
+                fromEl: leaderPartEl,
+                toEl: consEl
               });
 
               consumer.offsets[pId] = currentOffset + 1;
               consumer.committed[pId] = currentOffset + 1;
               this.addLog('consumer', `${group.id}:${consumer.id}`, `Fetched P${pId} Offset ${currentOffset} [Key='${rec.key}']`);
 
-              // Phase 2: Offset Commit Consumer -> Coordinator / Cluster
-              await this.animateFlight(consEl, leaderPartEl, {
+              // Phase 2: Offset Commit Consumer -> Coordinator (reverse along SVG path)
+              await this.animateFlightWithPath(consPathId, {
                 type: 'commit',
                 label: `📌 Commit (P${pId}:${consumer.committed[pId]})`,
-                duration: 400
+                duration: 400,
+                reverse: true,
+                fromEl: consEl,
+                toEl: leaderPartEl
               });
 
               this.addLog('consumer', `${group.id}:${consumer.id}`, `OffsetCommitRequest P${pId} -> Committed offset ${consumer.committed[pId]} to __consumer_offsets`);
@@ -489,10 +572,24 @@
           this.addLog('consumer', `${group.id}:${consumer.id}`, `Poll: Caught up to High Watermark (No new records).`);
         }
 
-        if (consEl) consEl.classList.remove('highlight-poll');
         this.render();
       } finally {
         this.state.isAnimating = false;
+      }
+    },
+
+    animateLogCellPop(cellId) {
+      if (window.anime) {
+        const el = document.getElementById(cellId);
+        if (el) {
+          window.anime({
+            targets: el,
+            scale: [0.2, 1.15, 1],
+            opacity: [0, 1],
+            easing: 'easeOutElastic(1, .7)',
+            duration: 450 / this.state.speed
+          });
+        }
       }
     },
 
@@ -501,9 +598,20 @@
       if (!broker) return;
 
       broker.online = !broker.online;
+      const brokerEl = document.getElementById(`broker-${brokerId}`);
 
       if (!broker.online) {
         this.addLog('failover', 'CLUSTER', `Broker ${brokerId} CRASHED / STOPPED.`);
+
+        if (window.anime && brokerEl) {
+          window.anime({
+            targets: brokerEl,
+            translateX: [0, -10, 10, -6, 6, -2, 2, 0],
+            opacity: [1, 0.55],
+            easing: 'easeInOutSine',
+            duration: 450
+          });
+        }
 
         // Remove from ISRs
         Object.values(this.state.partitions).forEach(part => {
@@ -523,6 +631,16 @@
         });
       } else {
         this.addLog('failover', 'CLUSTER', `Broker ${brokerId} RECOVERED & RESTARTED.`);
+
+        if (window.anime && brokerEl) {
+          window.anime({
+            targets: brokerEl,
+            scale: [0.95, 1.02, 1],
+            opacity: [0.55, 1],
+            easing: 'easeOutElastic(1, .8)',
+            duration: 500
+          });
+        }
 
         // Recover into ISR
         Object.values(this.state.partitions).forEach(part => {
@@ -856,7 +974,7 @@
                             <div class="viz-log-track-container">
                               <div class="viz-log-track" title="Topic Log (Left=Oldest, Right=LEO)">
                                 ${part.records.length === 0 ? `<span class="viz-log-empty">Empty Log</span>` : part.records.map(rec => `
-                                  <div class="viz-log-record ${rec.status} new-append" title="Offset: ${rec.offset}&#10;Key: ${rec.key}&#10;Value: ${rec.val}&#10;Status: ${rec.status}">
+                                  <div class="viz-log-record ${rec.status}" id="rec-${part.id}-${rec.offset}" title="Offset: ${rec.offset}&#10;Key: ${rec.key}&#10;Value: ${rec.val}&#10;Status: ${rec.status}">
                                     <span class="offset-num">#${rec.offset}</span>
                                     <span class="key-preview">${escapeHtml(rec.key)}</span>
                                   </div>
@@ -961,7 +1079,7 @@
       `;
 
       this.bindDynamicEvents();
-      setTimeout(() => this.drawConnectionCurves(), 100);
+      setTimeout(() => this.drawConnectionCurves(), 80);
     },
 
     bindEvents() {
@@ -1030,8 +1148,17 @@
     highlightNode(elementId) {
       const el = document.getElementById(elementId);
       if (el) {
-        el.classList.add('highlight-write');
-        setTimeout(() => el.classList.remove('highlight-write'), 800);
+        if (window.anime) {
+          window.anime({
+            targets: el,
+            boxShadow: ['0 0 0 rgba(99,102,241,0)', '0 0 24px rgba(99,102,241,0.7)', '0 0 0 rgba(99,102,241,0)'],
+            duration: 700 / this.state.speed,
+            easing: 'easeInOutQuad'
+          });
+        } else {
+          el.classList.add('highlight-write');
+          setTimeout(() => el.classList.remove('highlight-write'), 800);
+        }
       }
     },
 
@@ -1048,10 +1175,36 @@
       banner.style.fontSize = '0.9rem';
       banner.style.boxShadow = '0 6px 20px rgba(0,0,0,0.3)';
       banner.style.zIndex = '99999';
-      banner.style.animation = 'fadeIn 0.2s ease';
+      banner.style.opacity = '0';
       banner.innerText = msg;
       document.body.appendChild(banner);
-      setTimeout(() => banner.remove(), 2800);
+
+      if (window.anime) {
+        window.anime({
+          targets: banner,
+          opacity: [0, 1],
+          translateY: [20, 0],
+          duration: 350,
+          easing: 'easeOutCubic'
+        });
+      } else {
+        banner.style.opacity = '1';
+      }
+
+      setTimeout(() => {
+        if (window.anime) {
+          window.anime({
+            targets: banner,
+            opacity: [1, 0],
+            translateY: [0, 20],
+            duration: 300,
+            easing: 'easeInCubic',
+            complete: () => banner.remove()
+          });
+        } else {
+          banner.remove();
+        }
+      }, 2800);
     },
 
     clearLogs() {

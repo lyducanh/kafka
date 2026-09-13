@@ -1602,7 +1602,7 @@
   function displayResultsModal() {
     const { score, percentage, passed, categoryStats, questions } = state.exam;
 
-    els.scorePercent.textContent = `${percentage}%`;
+    els.scorePercent.textContent = `0%`;
     els.passBadge.textContent = passed ? t('passedBadge') : t('failedBadge');
     els.passBadge.className = `pass-badge ${passed ? 'passed' : 'failed'}`;
 
@@ -1637,6 +1637,45 @@
       });
 
     els.resultsModal.style.display = 'flex';
+
+    if (window.anime) {
+      // Animate score counter
+      const scoreObj = { scoreVal: 0 };
+      window.anime({
+        targets: scoreObj,
+        scoreVal: percentage,
+        round: 1,
+        easing: 'easeOutExpo',
+        duration: 1400,
+        update: () => {
+          els.scorePercent.textContent = `${scoreObj.scoreVal}%`;
+        }
+      });
+
+      // Animate modal content pop
+      const modalBox = els.resultsModal.querySelector('.modal-content');
+      if (modalBox) {
+        window.anime({
+          targets: modalBox,
+          scale: [0.8, 1],
+          opacity: [0, 1],
+          easing: 'easeOutElastic(1, .75)',
+          duration: 600
+        });
+      }
+
+      // Stagger breakdown rows
+      window.anime({
+        targets: els.categoryBreakdown.querySelectorAll('.cat-stat-row'),
+        opacity: [0, 1],
+        translateX: [-15, 0],
+        delay: window.anime.stagger(45, { start: 250 }),
+        easing: 'easeOutQuad',
+        duration: 400
+      });
+    } else {
+      els.scorePercent.textContent = `${percentage}%`;
+    }
   }
 
   function enterReviewMode() {
