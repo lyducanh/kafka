@@ -448,6 +448,19 @@
   };
 
   /* ==========================================================
+     ANALYTICS HELPER (Google Analytics 4 / gtag)
+     ========================================================== */
+  function trackAnalyticsEvent(eventName, params = {}) {
+    if (typeof window.gtag === 'function') {
+      try {
+        window.gtag('event', eventName, params);
+      } catch (err) {
+        // Silently catch in offline or blocked environments
+      }
+    }
+  }
+
+  /* ==========================================================
      UTILITY: Full-Featured Safe Markdown to HTML Formatter
      ========================================================== */
   function formatMarkdown(text) {
@@ -840,6 +853,7 @@
       updateTopStats();
     }
     saveState();
+    trackAnalyticsEvent('change_language', { language: lang });
   }
 
   /* ==========================================================
@@ -1491,6 +1505,7 @@
     renderQuestion();
     renderQuestionGrid();
     updateTopStats();
+    trackAnalyticsEvent('start_quiz', { quiz_name: 'CCDAK Timed Exam' });
   }
 
   function startTimer() {
@@ -1571,6 +1586,14 @@
     state.exam.percentage = percentage;
     state.exam.passed = passed;
     state.exam.categoryStats = catStats;
+
+    trackAnalyticsEvent('complete_quiz', {
+      quiz_name: 'CCDAK Timed Exam',
+      score: percentage,
+      passed: passed,
+      correct_answers: correct,
+      total_questions: total
+    });
 
     // Show Results Modal
     displayResultsModal();
@@ -1753,6 +1776,12 @@
       .map((t) => `<span class="badge badge-info">${t}</span>`)
       .join(' ');
 
+    trackAnalyticsEvent('view_item', {
+      item_type: 'blog_post',
+      item_id: post.slug || post.id,
+      item_name: title
+    });
+
     // Render markdown content
     els.blogArticleContent.innerHTML = formatMarkdown(post.content || '');
 
@@ -1826,6 +1855,11 @@
 
     state.mode = targetMode;
     state.currentIndex = 0;
+
+    trackAnalyticsEvent('select_content', {
+      content_type: 'mode',
+      item_id: targetMode
+    });
 
     // Update active tab buttons
     document.querySelectorAll('.mode-btn').forEach((btn) => {
