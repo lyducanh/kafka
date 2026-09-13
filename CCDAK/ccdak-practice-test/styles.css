@@ -1697,6 +1697,29 @@ header {
   margin: 2rem 0;
 }
 
+.markdown-body .blog-figure {
+  margin: 1.75rem auto;
+  text-align: center;
+}
+
+.markdown-body .blog-img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 10px;
+  border: 1px solid var(--border-color);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+  display: inline-block;
+  background: #ffffff;
+  padding: 0.5rem;
+}
+
+.markdown-body .blog-figcaption {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  margin-top: 0.5rem;
+  font-style: italic;
+}
+
 .markdown-body a {
   color: var(--primary);
   text-decoration: underline;

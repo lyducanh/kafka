@@ -531,6 +531,17 @@
     // 8. Italic *text* / _text_
     src = src.replace(/\*([^*]+)\*/g, '<em>$1</em>');
 
+    // 8.5 Images ![alt](url)
+    src = src.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, function(match, alt, url) {
+      let imgSrc = url.trim();
+      if (imgSrc.startsWith('./image/')) {
+        imgSrc = 'posts/image/' + imgSrc.substring(8);
+      } else if (imgSrc.startsWith('image/')) {
+        imgSrc = 'posts/image/' + imgSrc.substring(6);
+      }
+      return `<figure class="blog-figure"><img src="${imgSrc}" alt="${alt}" class="blog-img" /><figcaption class="blog-figcaption">${alt}</figcaption></figure>`;
+    });
+
     // 9. Links [text](url)
     src = src.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>');
 
