@@ -1832,8 +1832,21 @@
       item_name: title
     });
 
-    // Render markdown content
-    els.blogArticleContent.innerHTML = formatMarkdown(post.content || '');
+    // Render markdown content (stripping redundant top H1 if it repeats the article title)
+    let rawContent = (post.content || '').trim();
+    if (rawContent.startsWith('# ')) {
+      const firstLineEnd = rawContent.indexOf('\n');
+      if (firstLineEnd !== -1) {
+        const firstHeadingText = rawContent.substring(2, firstLineEnd).trim();
+        // If first heading roughly matches the post title or title_en, omit it to avoid duplicate title banner
+        if (firstHeadingText.toLowerCase() === title.toLowerCase() || 
+            (post.title && firstHeadingText.toLowerCase() === post.title.toLowerCase()) ||
+            (post.title_en && firstHeadingText.toLowerCase() === post.title_en.toLowerCase())) {
+          rawContent = rawContent.substring(firstLineEnd).trim();
+        }
+      }
+    }
+    els.blogArticleContent.innerHTML = formatMarkdown(rawContent);
 
     // Add copy buttons to code blocks
     els.blogArticleContent.querySelectorAll('pre.code-block').forEach((pre) => {
