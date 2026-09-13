@@ -2,15 +2,119 @@
    Kafka Visualizer Styles (SoftwareMill-like Interactive Simulation)
    ========================================================================== */
 
+.visualizer-container-section {
+  grid-column: 1 / -1;
+  width: 100%;
+  animation: fadeIn 0.3s ease-out;
+  position: relative;
+}
+
 .viz-container {
   display: flex;
   flex-direction: column;
   gap: 1.25rem;
   width: 100%;
-  max-width: 1400px;
+  max-width: 1440px;
   margin: 0 auto;
-  animation: fadeIn 0.3s ease;
   position: relative;
+}
+
+/* Dynamic SVG Canvas & Packet Layer */
+#vizSvgLayer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 20;
+}
+
+.viz-svg-path {
+  fill: none;
+  stroke: var(--border-color);
+  stroke-width: 2;
+  stroke-dasharray: 6 6;
+  opacity: 0.5;
+  transition: stroke 0.3s, opacity 0.3s;
+}
+
+.viz-svg-path.active {
+  stroke: var(--accent-primary);
+  opacity: 0.9;
+  stroke-width: 2.5;
+  animation: svgDashFlow 1.2s linear infinite;
+}
+
+@keyframes svgDashFlow {
+  to {
+    stroke-dashoffset: -24;
+  }
+}
+
+#vizPacketOverlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 100;
+  overflow: visible;
+}
+
+/* Flying Message Packet */
+.viz-flying-packet {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.35rem 0.75rem;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 800;
+  color: #ffffff;
+  pointer-events: none;
+  z-index: 120;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
+  white-space: nowrap;
+  animation: packetPulse 0.8s ease-in-out infinite alternate;
+}
+
+.viz-flying-packet.produce {
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  border: 1px solid #c7d2fe;
+  box-shadow: 0 0 16px rgba(99, 102, 241, 0.7);
+}
+
+.viz-flying-packet.replicate {
+  background: linear-gradient(135deg, #06b6d4, #3b82f6);
+  border: 1px solid #a5f3fc;
+  box-shadow: 0 0 16px rgba(6, 182, 212, 0.7);
+}
+
+.viz-flying-packet.ack {
+  background: linear-gradient(135deg, #10b981, #059669);
+  border: 1px solid #a7f3d0;
+  box-shadow: 0 0 16px rgba(16, 185, 129, 0.7);
+}
+
+.viz-flying-packet.fetch {
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+  border: 1px solid #fde68a;
+  box-shadow: 0 0 16px rgba(245, 158, 11, 0.7);
+}
+
+.viz-flying-packet.commit {
+  background: linear-gradient(135deg, #ec4899, #db2777);
+  border: 1px solid #fbcfe8;
+  box-shadow: 0 0 16px rgba(236, 72, 153, 0.7);
+}
+
+@keyframes packetPulse {
+  0% { transform: translate(-50%, -50%) scale(0.96); }
+  100% { transform: translate(-50%, -50%) scale(1.04); }
 }
 
 /* Control Toolbar & Scenario Presets */
@@ -48,7 +152,7 @@
   border-radius: 8px;
   padding: 0.55rem 0.85rem;
   font-size: 0.9rem;
-  font-weight: 500;
+  font-weight: 600;
   cursor: pointer;
   outline: none;
   transition: all 0.2s;
@@ -102,7 +206,7 @@
 
 .viz-btn.primary:hover:not(:disabled) {
   background: var(--accent-hover);
-  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.35);
 }
 
 .viz-btn.danger {
@@ -112,7 +216,7 @@
 }
 
 .viz-btn.danger:hover:not(:disabled) {
-  background: rgba(239, 68, 68, 0.2);
+  background: rgba(239, 68, 68, 0.25);
   border-color: #ef4444;
 }
 
@@ -123,7 +227,7 @@
 }
 
 .viz-btn.success:hover:not(:disabled) {
-  background: rgba(16, 185, 129, 0.2);
+  background: rgba(16, 185, 129, 0.25);
   border-color: #10b981;
 }
 
@@ -190,10 +294,11 @@
 /* Main Visualizer Stage Grid (3 Columns) */
 .viz-stage {
   display: grid;
-  grid-template-columns: 320px 1fr 340px;
-  gap: 1.25rem;
+  grid-template-columns: 310px 1fr 330px;
+  gap: 1.5rem;
   align-items: start;
   position: relative;
+  min-height: 480px;
 }
 
 @media (max-width: 1200px) {
@@ -206,6 +311,7 @@
   display: flex;
   flex-direction: column;
   gap: 1rem;
+  z-index: 30;
 }
 
 .viz-col-header {
@@ -229,16 +335,26 @@
   background: var(--card-bg);
   border: 1px solid var(--border-color);
   border-radius: 12px;
-  padding: 1rem 1.15rem;
+  padding: 1.1rem;
   box-shadow: var(--card-shadow);
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
   transition: all 0.2s ease;
+  position: relative;
 }
 
 .viz-producer-card:hover {
   border-color: rgba(99, 102, 241, 0.4);
+}
+
+.viz-producer-card.highlight-send {
+  animation: flashSend 0.6s ease;
+}
+
+@keyframes flashSend {
+  0% { box-shadow: 0 0 24px rgba(99, 102, 241, 0.8); border-color: var(--accent-primary); }
+  100% { box-shadow: none; }
 }
 
 .viz-card-head {
@@ -299,7 +415,7 @@
 
 .viz-brokers-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
   gap: 1rem;
 }
 
@@ -316,10 +432,17 @@
 }
 
 .viz-broker-node.crashed {
-  border-color: rgba(239, 68, 68, 0.4);
-  background: rgba(239, 68, 68, 0.04);
-  opacity: 0.65;
-  filter: grayscale(0.6);
+  border-color: rgba(239, 68, 68, 0.5);
+  background: rgba(239, 68, 68, 0.05);
+  opacity: 0.6;
+  filter: grayscale(0.7);
+  animation: crashShake 0.4s ease;
+}
+
+@keyframes crashShake {
+  0%, 100% { transform: translateX(0); }
+  20%, 60% { transform: translateX(-6px); }
+  40%, 80% { transform: translateX(6px); }
 }
 
 .viz-broker-node.highlight-write {
@@ -327,7 +450,16 @@
 }
 
 @keyframes brokerPulse {
-  0% { border-color: var(--accent-primary); box-shadow: 0 0 16px rgba(99, 102, 241, 0.5); }
+  0% { border-color: #6366f1; box-shadow: 0 0 20px rgba(99, 102, 241, 0.6); }
+  100% { border-color: var(--border-color); box-shadow: none; }
+}
+
+.viz-broker-node.highlight-replicate {
+  animation: followerPulse 0.8s ease;
+}
+
+@keyframes followerPulse {
+  0% { border-color: #06b6d4; box-shadow: 0 0 20px rgba(6, 182, 212, 0.6); }
   100% { border-color: var(--border-color); box-shadow: none; }
 }
 
@@ -375,6 +507,7 @@
   background: rgba(245, 158, 11, 0.18);
   color: #f59e0b;
   border: 1px solid rgba(245, 158, 11, 0.35);
+  box-shadow: 0 0 8px rgba(245, 158, 11, 0.2);
 }
 
 .viz-badge.controller {
@@ -398,6 +531,13 @@
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
+  transition: all 0.2s;
+  position: relative;
+}
+
+.viz-partition-box.leader-box {
+  border-color: rgba(245, 158, 11, 0.3);
+  background: linear-gradient(180deg, rgba(245, 158, 11, 0.04), var(--bg-tertiary));
 }
 
 .viz-partition-head {
@@ -421,22 +561,30 @@
 }
 
 /* Offset Log Track */
+.viz-log-track-container {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
 .viz-log-track {
   display: flex;
   align-items: center;
   gap: 0.35rem;
   overflow-x: auto;
-  padding: 0.35rem 0.2rem;
-  min-height: 48px;
+  padding: 0.4rem 0.3rem;
+  min-height: 52px;
   background: var(--bg-primary);
   border-radius: 6px;
   border: 1px dashed var(--border-color);
+  position: relative;
 }
 
 .viz-log-record {
   flex-shrink: 0;
-  width: 38px;
-  height: 38px;
+  width: 44px;
+  height: 44px;
   border-radius: 6px;
   background: var(--bg-secondary);
   border: 1px solid var(--border-color);
@@ -451,39 +599,45 @@
   cursor: pointer;
 }
 
+.viz-log-record:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.25);
+}
+
 .viz-log-record.committed {
   background: rgba(16, 185, 129, 0.18);
-  border-color: rgba(16, 185, 129, 0.4);
+  border-color: rgba(16, 185, 129, 0.45);
   color: #10b981;
 }
 
 .viz-log-record.uncommitted {
   background: rgba(245, 158, 11, 0.18);
-  border-color: rgba(245, 158, 11, 0.4);
+  border-color: rgba(245, 158, 11, 0.45);
   color: #f59e0b;
 }
 
 .viz-log-record.new-append {
-  animation: popIn 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  animation: cellPopIn 0.45s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
 
-@keyframes popIn {
-  0% { transform: scale(0.3); opacity: 0; }
+@keyframes cellPopIn {
+  0% { transform: scale(0.2); opacity: 0; }
+  70% { transform: scale(1.15); }
   100% { transform: scale(1); opacity: 1; }
 }
 
 .viz-log-record .offset-num {
-  font-size: 0.78rem;
+  font-size: 0.8rem;
   font-weight: 800;
 }
 
 .viz-log-record .key-preview {
-  font-size: 0.55rem;
-  max-width: 32px;
+  font-size: 0.58rem;
+  max-width: 38px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  opacity: 0.8;
+  opacity: 0.85;
 }
 
 .viz-log-empty {
@@ -506,11 +660,12 @@
   background: var(--card-bg);
   border: 1px solid var(--border-color);
   border-radius: 12px;
-  padding: 1rem 1.15rem;
+  padding: 1.1rem;
   box-shadow: var(--card-shadow);
   display: flex;
   flex-direction: column;
   gap: 0.85rem;
+  position: relative;
 }
 
 .viz-consumer-item {
@@ -522,11 +677,21 @@
   flex-direction: column;
   gap: 0.5rem;
   transition: all 0.2s ease;
+  position: relative;
 }
 
 .viz-consumer-item.crashed {
   opacity: 0.55;
   border-color: rgba(239, 68, 68, 0.3);
+}
+
+.viz-consumer-item.highlight-poll {
+  animation: consumerPulse 0.8s ease;
+}
+
+@keyframes consumerPulse {
+  0% { border-color: #10b981; box-shadow: 0 0 20px rgba(16, 185, 129, 0.6); }
+  100% { border-color: var(--border-color); box-shadow: none; }
 }
 
 .viz-consumer-head {
@@ -671,33 +836,4 @@
 .viz-log-msg {
   color: #cbd5e1;
   word-break: break-word;
-}
-
-/* Floating Flight Packet Layer */
-#vizPacketOverlay {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  pointer-events: none;
-  z-index: 50;
-}
-
-.viz-flying-packet {
-  position: absolute;
-  background: var(--accent-primary);
-  color: #ffffff;
-  padding: 0.25rem 0.6rem;
-  border-radius: 12px;
-  font-size: 0.72rem;
-  font-weight: 800;
-  box-shadow: 0 4px 14px rgba(99, 102, 241, 0.6);
-  pointer-events: none;
-  display: flex;
-  align-items: center;
-  gap: 0.25rem;
-  transform: translate(-50%, -50%);
-  transition: transform 0.6s cubic-bezier(0.25, 1, 0.5, 1);
-  z-index: 60;
 }

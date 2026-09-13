@@ -1,6 +1,6 @@
 /**
  * Kafka Visualizer - Interactive Simulator & Architecture Explorer
- * Inspired by SoftwareMill's Kafka Visualization
+ * Accurate SoftwareMill-style Animation & Replicated Partition Engine
  */
 
 (function (window) {
@@ -13,9 +13,10 @@
       replicationFactor: 3,
       minInsyncReplicas: 2,
       controllerId: 1,
-      speed: 1, // 0.5, 1, 2
+      speed: 1,
       isRunningStream: false,
       streamIntervalId: null,
+      isAnimating: false,
       currentScenario: 'basic',
 
       brokers: [
@@ -24,7 +25,7 @@
         { id: 3, online: true, isController: false }
       ],
 
-      // partitionId -> { id, leader, replicas: [], isr: [], records: [{offset, key, val, committed}], hw: 0, leo: 0 }
+      // partitionId -> { id, leader, replicas: [], isr: [], records: [{offset, key, val, status}], hw: 0, leo: 0 }
       partitions: {},
 
       producers: [
@@ -49,8 +50,8 @@
       basic: {
         titleEn: '1. Basic Produce & Consume Flow',
         titleVi: '1. Luồng Gửi & Tiêu Thụ Cơ Bản (Basic Flow)',
-        descEn: 'Publish a record from Producer to Broker Leader. Follower brokers fetch and replicate the record. High Watermark advances, acknowledging the producer. Consumers poll the committed offset.',
-        descVi: 'Gửi bản ghi từ Producer tới Broker Leader. Các broker Follower sao chép dữ liệu. High Watermark tăng lên, gửi ACK về Producer. Consumer đọc dữ liệu và commit offset.'
+        descEn: 'Observe the animated message packet traveling from Producer to Leader, followed by concurrent replication to ISR followers, High Watermark advancement, ACK return, and Consumer polling.',
+        descVi: 'Quan sát gói tin bay từ Producer tới Broker Leader, tiếp tục nhân bản sang các Follower trong ISR, High Watermark tiến lên, trả ACK và Consumer đọc bản ghi.'
       },
       partitioning: {
         titleEn: '2. Key-based Partitioning (Ordering)',
@@ -129,7 +130,6 @@
       ];
 
       this.rebalanceGroup(this.state.consumerGroups[0]);
-
       this.state.logs = [];
       this.addLog('system', 'SYSTEM', `Kafka Cluster initialized (KRaft Mode, 3 Brokers, Topic: '${this.state.topic}', Partitions: ${this.state.numPartitions}, RF: ${this.state.replicationFactor}, min.insync.replicas: ${this.state.minInsyncReplicas})`);
     },
@@ -138,7 +138,6 @@
       const activeConsumers = group.consumers.filter(c => c.online);
       const partitionIds = Object.keys(this.state.partitions).map(Number);
 
-      // Reset assignments
       group.consumers.forEach(c => {
         c.assigned = [];
       });
@@ -148,7 +147,6 @@
         return;
       }
 
-      // Range assignment strategy
       partitionIds.forEach((pId, idx) => {
         const assignedConsumer = activeConsumers[idx % activeConsumers.length];
         assignedConsumer.assigned.push(pId);
@@ -172,112 +170,330 @@
       return Math.abs(hash) % this.state.numPartitions;
     },
 
-    async produceRecord(producerId) {
-      const producer = this.state.producers.find(p => p.id === producerId);
-      if (!producer) return;
+    /* ==========================================================
+       SVG PATH & FLIGHT ANIMATION ENGINE
+       ========================================================== */
+    drawConnectionCurves() {
+      const svg = document.getElementById('vizSvgLayer');
+      if (!svg) return;
 
-      let targetPartId;
-      if (producer.partitionTarget === 'auto') {
-        targetPartId = this.getPartitionForKey(producer.key);
-      } else {
-        targetPartId = parseInt(producer.partitionTarget, 10);
-      }
+      const stage = document.querySelector('.viz-stage');
+      if (!stage) return;
 
-      const partition = this.state.partitions[targetPartId];
-      if (!partition) return;
+      const stageRect = stage.getBoundingClientRect();
+      svg.setAttribute('viewBox', `0 0 ${stageRect.width} ${stageRect.height}`);
+      svg.innerHTML = '';
 
-      const leaderBroker = this.state.brokers.find(b => b.id === partition.leader);
-      if (!leaderBroker || !leaderBroker.online) {
-        this.addLog('failover', producer.id, `ProduceRequest failed: Leader for Partition ${targetPartId} is OFFLINE (LeaderNotAvailableException)`);
-        this.triggerFlashMessage(`❌ Produce failed: Leader for Partition ${targetPartId} is OFFLINE!`, 'error');
-        return;
-      }
+      // Producer to Leader Partitions
+      this.state.producers.forEach(p => {
+        const prodEl = document.getElementById(`producer-${p.id}`);
+        if (!prodEl) return;
+        const pRect = prodEl.getBoundingClientRect();
+        const startX = pRect.right - stageRect.left;
+        const startY = pRect.top + pRect.height / 2 - stageRect.top;
 
-      // Check min.insync.replicas
-      if (producer.acks === 'all' && partition.isr.length < this.state.minInsyncReplicas) {
-        this.addLog('failover', producer.id, `ProduceRequest rejected: ISR count (${partition.isr.length}) < min.insync.replicas (${this.state.minInsyncReplicas}) -> NotEnoughReplicasException`);
-        this.triggerFlashMessage(`❌ Rejected: ISR (${partition.isr.length}) < min.insync.replicas (${this.state.minInsyncReplicas})`, 'error');
-        return;
-      }
+        Object.values(this.state.partitions).forEach(part => {
+          const leaderEl = document.getElementById(`part-${part.leader}-${part.id}`);
+          if (!leaderEl) return;
+          const lRect = leaderEl.getBoundingClientRect();
+          const endX = lRect.left - stageRect.left;
+          const endY = lRect.top + lRect.height / 2 - stageRect.top;
 
-      const newOffset = partition.leo;
-      this.addLog('producer', producer.id, `ProduceRequest -> Topic '${this.state.topic}', P${targetPartId}, Key='${producer.key}', Acks=${producer.acks}`);
-
-      // Append uncommitted to leader
-      const newRecord = {
-        offset: newOffset,
-        key: producer.key,
-        val: producer.val,
-        status: producer.acks === '0' ? 'committed' : 'uncommitted'
-      };
-
-      partition.records.push(newRecord);
-      partition.leo = newOffset + 1;
-
-      this.highlightNode(`broker-${leaderBroker.id}`);
-      this.render();
-
-      this.addLog('leader', `BROKER ${leaderBroker.id}`, `Leader P${targetPartId} appended record at offset ${newOffset} (LEO=${partition.leo})`);
-
-      // Replication delay simulation
-      await this.sleep(400 / this.state.speed);
-
-      // Followers replicate
-      const onlineFollowers = partition.replicas.filter(rId => {
-        const b = this.state.brokers.find(br => br.id === rId);
-        return rId !== partition.leader && b && b.online;
+          const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+          const cp1X = startX + (endX - startX) * 0.5;
+          const cp1Y = startY;
+          const cp2X = startX + (endX - startX) * 0.5;
+          const cp2Y = endY;
+          path.setAttribute('d', `M ${startX} ${startY} C ${cp1X} ${cp1Y}, ${cp2X} ${cp2Y}, ${endX} ${endY}`);
+          path.setAttribute('class', 'viz-svg-path');
+          path.id = `path-prod-${p.id}-part-${part.id}`;
+          svg.appendChild(path);
+        });
       });
 
-      for (const followerId of onlineFollowers) {
-        this.addLog('isr', `BROKER ${followerId}`, `FetchRequest P${targetPartId} -> Replicated offset ${newOffset}`);
-      }
+      // Leader Partitions to Active Consumers
+      this.state.consumerGroups.forEach(g => {
+        g.consumers.forEach(c => {
+          if (!c.online) return;
+          const consEl = document.getElementById(`consumer-${c.id}`);
+          if (!consEl) return;
+          const cRect = consEl.getBoundingClientRect();
+          const endX = cRect.left - stageRect.left;
+          const endY = cRect.top + cRect.height / 2 - stageRect.top;
 
-      await this.sleep(300 / this.state.speed);
+          c.assigned.forEach(pId => {
+            const part = this.state.partitions[pId];
+            if (!part) return;
+            const leaderEl = document.getElementById(`part-${part.leader}-${part.id}`);
+            if (!leaderEl) return;
+            const lRect = leaderEl.getBoundingClientRect();
+            const startX = lRect.right - stageRect.left;
+            const startY = lRect.top + lRect.height / 2 - stageRect.top;
 
-      // Advance High Watermark
-      if (partition.isr.length >= (producer.acks === 'all' ? this.state.minInsyncReplicas : 1)) {
-        partition.hw = partition.leo;
-        newRecord.status = 'committed';
-        this.addLog('isr', `PARTITION ${targetPartId}`, `All ISR [${partition.isr.join(',')}] in sync -> High Watermark advanced to ${partition.hw}`);
-      }
-
-      this.addLog('producer', producer.id, `ProduceResponse -> ACK OK (Topic='${this.state.topic}', Partition=${targetPartId}, Offset=${newOffset})`);
-      this.render();
+            const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+            const cp1X = startX + (endX - startX) * 0.5;
+            const cp1Y = startY;
+            const cp2X = startX + (endX - startX) * 0.5;
+            const cp2Y = endY;
+            path.setAttribute('d', `M ${startX} ${startY} C ${cp1X} ${cp1Y}, ${cp2X} ${cp2Y}, ${endX} ${endY}`);
+            path.setAttribute('class', 'viz-svg-path');
+            path.id = `path-part-${part.id}-cons-${c.id}`;
+            svg.appendChild(path);
+          });
+        });
+      });
     },
 
-    async pollConsumer(groupId, consumerId) {
-      const group = this.state.consumerGroups.find(g => g.id === groupId);
-      if (!group) return;
-      const consumer = group.consumers.find(c => c.id === consumerId);
-      if (!consumer || !consumer.online) return;
+    animateFlight(fromEl, toEl, options = {}) {
+      return new Promise(resolve => {
+        if (!fromEl || !toEl) {
+          resolve();
+          return;
+        }
 
-      if (consumer.assigned.length === 0) {
-        this.addLog('consumer', consumer.id, `Poll: No partitions assigned to this consumer.`);
-        return;
-      }
+        const overlay = document.getElementById('vizPacketOverlay');
+        if (!overlay) {
+          resolve();
+          return;
+        }
 
-      let readAny = false;
-      for (const pId of consumer.assigned) {
-        const partition = this.state.partitions[pId];
-        const currentOffset = consumer.offsets[pId] || 0;
+        const stage = document.querySelector('.viz-stage');
+        const stageRect = stage ? stage.getBoundingClientRect() : { left: 0, top: 0 };
 
-        if (currentOffset < partition.hw) {
-          const rec = partition.records.find(r => r.offset === currentOffset);
-          if (rec) {
-            readAny = true;
-            this.addLog('consumer', `${group.id}:${consumer.id}`, `Fetched P${pId} Offset ${currentOffset} [Key='${rec.key}'] (Processed)`);
-            consumer.offsets[pId] = currentOffset + 1;
-            consumer.committed[pId] = currentOffset + 1;
-            this.addLog('consumer', `${group.id}:${consumer.id}`, `OffsetCommitRequest P${pId} -> Committed offset ${consumer.committed[pId]} to __consumer_offsets`);
+        const fromRect = fromEl.getBoundingClientRect();
+        const toRect = toEl.getBoundingClientRect();
+
+        const startX = fromRect.left + fromRect.width / 2 - stageRect.left;
+        const startY = fromRect.top + fromRect.height / 2 - stageRect.top;
+        const endX = toRect.left + toRect.width / 2 - stageRect.left;
+        const endY = toRect.top + toRect.height / 2 - stageRect.top;
+
+        const packet = document.createElement('div');
+        packet.className = `viz-flying-packet ${options.type || 'produce'}`;
+        packet.innerHTML = options.label || '✉️';
+        packet.style.left = `${startX}px`;
+        packet.style.top = `${startY}px`;
+        packet.style.opacity = '1';
+        overlay.appendChild(packet);
+
+        const duration = (options.duration || 600) / this.state.speed;
+        const startTime = performance.now();
+
+        function updateFrame(now) {
+          const elapsed = now - startTime;
+          const progress = Math.min(1, elapsed / duration);
+          // Ease-in-out cubic
+          const ease = progress < 0.5 ? 4 * progress * progress * progress : 1 - Math.pow(-2 * progress + 2, 3) / 2;
+
+          const curX = startX + (endX - startX) * ease;
+          const curY = startY + (endY - startY) * ease;
+
+          packet.style.left = `${curX}px`;
+          packet.style.top = `${curY}px`;
+
+          if (progress < 1) {
+            requestAnimationFrame(updateFrame);
+          } else {
+            packet.remove();
+            resolve();
           }
         }
-      }
 
-      if (!readAny) {
-        this.addLog('consumer', `${group.id}:${consumer.id}`, `Poll: Caught up to High Watermark (No new records).`);
-      }
+        requestAnimationFrame(updateFrame);
+      });
+    },
 
-      this.render();
+    /* ==========================================================
+       PRODUCE RECORD LIFECYCLE ANIMATION
+       ========================================================== */
+    async produceRecord(producerId) {
+      if (this.state.isAnimating) return;
+      this.state.isAnimating = true;
+
+      try {
+        const producer = this.state.producers.find(p => p.id === producerId);
+        if (!producer) return;
+
+        let targetPartId;
+        if (producer.partitionTarget === 'auto') {
+          targetPartId = this.getPartitionForKey(producer.key);
+        } else {
+          targetPartId = parseInt(producer.partitionTarget, 10);
+        }
+
+        const partition = this.state.partitions[targetPartId];
+        if (!partition) return;
+
+        const leaderBroker = this.state.brokers.find(b => b.id === partition.leader);
+        if (!leaderBroker || !leaderBroker.online) {
+          this.addLog('failover', producer.id, `ProduceRequest failed: Leader for Partition ${targetPartId} is OFFLINE (LeaderNotAvailableException)`);
+          this.triggerFlashMessage(`❌ Produce failed: Leader for Partition ${targetPartId} is OFFLINE!`, 'error');
+          return;
+        }
+
+        // Check min.insync.replicas
+        if (producer.acks === 'all' && partition.isr.length < this.state.minInsyncReplicas) {
+          this.addLog('failover', producer.id, `ProduceRequest rejected: ISR (${partition.isr.length}) < min.insync.replicas (${this.state.minInsyncReplicas}) -> NotEnoughReplicasException`);
+          this.triggerFlashMessage(`❌ Rejected: ISR (${partition.isr.length}) < min.insync.replicas (${this.state.minInsyncReplicas})`, 'error');
+          return;
+        }
+
+        const prodEl = document.getElementById(`producer-${producer.id}`);
+        const leaderPartEl = document.getElementById(`part-${partition.leader}-${partition.id}`);
+        if (prodEl) prodEl.classList.add('highlight-send');
+
+        const newOffset = partition.leo;
+        this.addLog('producer', producer.id, `ProduceRequest -> Topic '${this.state.topic}', P${targetPartId}, Key='${producer.key}', Acks=${producer.acks}`);
+
+        // Phase 1: Animate Packet Producer -> Leader Partition
+        await this.animateFlight(prodEl, leaderPartEl, {
+          type: 'produce',
+          label: `✉️ P${targetPartId} [${producer.key}]`,
+          duration: 550
+        });
+
+        if (prodEl) prodEl.classList.remove('highlight-send');
+
+        // Phase 2: Append uncommitted to leader log
+        const newRecord = {
+          offset: newOffset,
+          key: producer.key,
+          val: producer.val,
+          status: producer.acks === '0' ? 'committed' : 'uncommitted'
+        };
+
+        partition.records.push(newRecord);
+        partition.leo = newOffset + 1;
+
+        this.highlightNode(`broker-${leaderBroker.id}`);
+        this.render();
+        this.addLog('leader', `BROKER ${leaderBroker.id}`, `Leader P${targetPartId} appended record at offset ${newOffset} (LEO=${partition.leo})`);
+
+        // Phase 3: Concurrent Replication to Followers
+        const onlineFollowers = partition.replicas.filter(rId => {
+          const b = this.state.brokers.find(br => br.id === rId);
+          return rId !== partition.leader && b && b.online;
+        });
+
+        if (onlineFollowers.length > 0) {
+          const leaderElCurrent = document.getElementById(`part-${partition.leader}-${partition.id}`);
+          const replPromises = onlineFollowers.map(async fId => {
+            const followerPartEl = document.getElementById(`part-${fId}-${partition.id}`);
+            const followerBrokerEl = document.getElementById(`broker-${fId}`);
+
+            if (followerBrokerEl) followerBrokerEl.classList.add('highlight-replicate');
+
+            // Flight Leader -> Follower
+            await this.animateFlight(leaderElCurrent, followerPartEl, {
+              type: 'replicate',
+              label: `🔄 Replicate (off:${newOffset})`,
+              duration: 500
+            });
+
+            this.addLog('isr', `BROKER ${fId}`, `Follower replicated P${targetPartId} offset ${newOffset}`);
+
+            // Follower ACK -> Leader
+            await this.animateFlight(followerPartEl, leaderElCurrent, {
+              type: 'ack',
+              label: `✓ ACK`,
+              duration: 350
+            });
+
+            if (followerBrokerEl) followerBrokerEl.classList.remove('highlight-replicate');
+          });
+
+          await Promise.all(replPromises);
+        }
+
+        // Phase 4: Advance High Watermark
+        if (partition.isr.length >= (producer.acks === 'all' ? this.state.minInsyncReplicas : 1)) {
+          partition.hw = partition.leo;
+          newRecord.status = 'committed';
+          this.addLog('isr', `PARTITION ${targetPartId}`, `All ISR [${partition.isr.join(',')}] in sync -> High Watermark advanced to ${partition.hw}`);
+        }
+
+        // Phase 5: Return Producer ACK if acks != 0
+        if (producer.acks !== '0') {
+          const leaderElDone = document.getElementById(`part-${partition.leader}-${partition.id}`);
+          const prodElTarget = document.getElementById(`producer-${producer.id}`);
+          await this.animateFlight(leaderElDone, prodElTarget, {
+            type: 'ack',
+            label: `✅ ACK (P${targetPartId}:${newOffset})`,
+            duration: 400
+          });
+        }
+
+        this.addLog('producer', producer.id, `ProduceResponse -> ACK OK (Topic='${this.state.topic}', Partition=${targetPartId}, Offset=${newOffset})`);
+        this.render();
+      } finally {
+        this.state.isAnimating = false;
+      }
+    },
+
+    /* ==========================================================
+       CONSUME RECORD LIFECYCLE ANIMATION
+       ========================================================== */
+    async pollConsumer(groupId, consumerId) {
+      if (this.state.isAnimating) return;
+      this.state.isAnimating = true;
+
+      try {
+        const group = this.state.consumerGroups.find(g => g.id === groupId);
+        if (!group) return;
+        const consumer = group.consumers.find(c => c.id === consumerId);
+        if (!consumer || !consumer.online) return;
+
+        if (consumer.assigned.length === 0) {
+          this.addLog('consumer', consumer.id, `Poll: No partitions assigned to this consumer.`);
+          return;
+        }
+
+        const consEl = document.getElementById(`consumer-${consumer.id}`);
+        if (consEl) consEl.classList.add('highlight-poll');
+
+        let readAny = false;
+        for (const pId of consumer.assigned) {
+          const partition = this.state.partitions[pId];
+          const currentOffset = consumer.offsets[pId] || 0;
+
+          if (currentOffset < partition.hw) {
+            const rec = partition.records.find(r => r.offset === currentOffset);
+            if (rec) {
+              readAny = true;
+              const leaderPartEl = document.getElementById(`part-${partition.leader}-${partition.id}`);
+
+              // Phase 1: Fetch Record Leader -> Consumer
+              await this.animateFlight(leaderPartEl, consEl, {
+                type: 'fetch',
+                label: `📥 P${pId}:${currentOffset} [${rec.key}]`,
+                duration: 500
+              });
+
+              consumer.offsets[pId] = currentOffset + 1;
+              consumer.committed[pId] = currentOffset + 1;
+              this.addLog('consumer', `${group.id}:${consumer.id}`, `Fetched P${pId} Offset ${currentOffset} [Key='${rec.key}']`);
+
+              // Phase 2: Offset Commit Consumer -> Coordinator / Cluster
+              await this.animateFlight(consEl, leaderPartEl, {
+                type: 'commit',
+                label: `📌 Commit (P${pId}:${consumer.committed[pId]})`,
+                duration: 400
+              });
+
+              this.addLog('consumer', `${group.id}:${consumer.id}`, `OffsetCommitRequest P${pId} -> Committed offset ${consumer.committed[pId]} to __consumer_offsets`);
+            }
+          }
+        }
+
+        if (!readAny) {
+          this.addLog('consumer', `${group.id}:${consumer.id}`, `Poll: Caught up to High Watermark (No new records).`);
+        }
+
+        if (consEl) consEl.classList.remove('highlight-poll');
+        this.render();
+      } finally {
+        this.state.isAnimating = false;
+      }
     },
 
     toggleBroker(brokerId) {
@@ -288,7 +504,7 @@
 
       if (!broker.online) {
         this.addLog('failover', 'CLUSTER', `Broker ${brokerId} CRASHED / STOPPED.`);
-        
+
         // Remove from ISRs
         Object.values(this.state.partitions).forEach(part => {
           part.isr = part.isr.filter(id => id !== brokerId);
@@ -307,7 +523,7 @@
         });
       } else {
         this.addLog('failover', 'CLUSTER', `Broker ${brokerId} RECOVERED & RESTARTED.`);
-        
+
         // Recover into ISR
         Object.values(this.state.partitions).forEach(part => {
           if (part.replicas.includes(brokerId) && !part.isr.includes(brokerId)) {
@@ -364,7 +580,7 @@
       } else if (scenarioKey === 'replication') {
         this.state.producers[0].acks = 'all';
       } else if (scenarioKey === 'failover') {
-        this.addLog('failover', 'SCENARIO', 'Scenario 4 loaded: Click "Crash Broker" on Broker 1 to trigger instant Leader election!');
+        this.addLog('failover', 'SCENARIO', 'Scenario 4: Click "Crash Broker" on Broker 1 to trigger instant Leader election!');
       } else if (scenarioKey === 'rebalance') {
         this.addConsumer('analytics-cg');
       } else if (scenarioKey === 'min_isr') {
@@ -407,20 +623,21 @@
       if (this.state.isRunningStream) {
         if (btn) btn.innerHTML = '⏸ <span id="vizStreamLabel">Pause Stream</span>';
         this.state.streamIntervalId = setInterval(async () => {
+          if (this.state.isAnimating) return;
           const keys = ['user_101', 'user_202', 'order_505', 'sensor_99', 'item_33'];
           const randKey = keys[Math.floor(Math.random() * keys.length)];
           this.state.producers[0].key = randKey;
-          this.state.producers[0].val = JSON.stringify({ event: 'event_' + Math.floor(Math.random() * 1000), ts: Date.now() });
+          this.state.producers[0].val = JSON.stringify({ event: 'evt_' + Math.floor(Math.random() * 1000), ts: Date.now() });
+
           await this.produceRecord(this.state.producers[0].id);
 
-          // Random poll
           const group = this.state.consumerGroups[0];
           const onlineConsumers = group.consumers.filter(c => c.online);
           if (onlineConsumers.length > 0) {
             const randConsumer = onlineConsumers[Math.floor(Math.random() * onlineConsumers.length)];
             await this.pollConsumer(group.id, randConsumer.id);
           }
-        }, 2200 / this.state.speed);
+        }, 2600 / this.state.speed);
       } else {
         if (btn) btn.innerHTML = '▶ <span id="vizStreamLabel">Start Stream</span>';
         if (this.state.streamIntervalId) {
@@ -431,7 +648,6 @@
     },
 
     async stepForward() {
-      // Execute 1 produce step then 1 poll step
       await this.produceRecord(this.state.producers[0].id);
       const group = this.state.consumerGroups[0];
       const onlineConsumers = group.consumers.filter(c => c.online);
@@ -469,6 +685,10 @@
 
       container.innerHTML = `
         <div class="viz-container">
+          <!-- SVG Connection Curves & Flight Overlay Layer -->
+          <svg id="vizSvgLayer"></svg>
+          <div id="vizPacketOverlay"></div>
+
           <!-- Control Toolbar Card -->
           <div class="viz-toolbar-card">
             <div class="viz-toolbar-top">
@@ -584,7 +804,7 @@
                   </div>
 
                   <button class="viz-btn primary" onclick="KafkaViz.handleProduceClick('${p.id}')" style="margin-top: 0.35rem; justify-content: center;">
-                    📤 ${isVi ? 'Gửi Bản Ghi' : 'Send Record'}
+                    📤 ${isVi ? 'Gửi Bản Ghi (Animate)' : 'Send Record (Animate)'}
                   </button>
                 </div>
               `).join('')}
@@ -621,7 +841,7 @@
                         if (!isReplica) return '';
 
                         return `
-                          <div class="viz-partition-box">
+                          <div class="viz-partition-box ${isLeader ? 'leader-box' : ''}" id="part-${broker.id}-${part.id}">
                             <div class="viz-partition-head">
                               <span class="viz-part-name">
                                 📑 ${this.state.topic}-P${part.id}
@@ -632,19 +852,21 @@
                               </span>
                             </div>
 
-                            <!-- Log Records Track -->
-                            <div class="viz-log-track" title="Topic Log (Left=Oldest, Right=LEO)">
-                              ${part.records.length === 0 ? `<span class="viz-log-empty">Empty Log</span>` : part.records.map(rec => `
-                                <div class="viz-log-record ${rec.status}" title="Offset: ${rec.offset}&#10;Key: ${rec.key}&#10;Value: ${rec.val}&#10;Status: ${rec.status}">
-                                  <span class="offset-num">${rec.offset}</span>
-                                  <span class="key-preview">${escapeHtml(rec.key)}</span>
-                                </div>
-                              `).join('')}
-                            </div>
+                            <!-- Log Records Track Container -->
+                            <div class="viz-log-track-container">
+                              <div class="viz-log-track" title="Topic Log (Left=Oldest, Right=LEO)">
+                                ${part.records.length === 0 ? `<span class="viz-log-empty">Empty Log</span>` : part.records.map(rec => `
+                                  <div class="viz-log-record ${rec.status} new-append" title="Offset: ${rec.offset}&#10;Key: ${rec.key}&#10;Value: ${rec.val}&#10;Status: ${rec.status}">
+                                    <span class="offset-num">#${rec.offset}</span>
+                                    <span class="key-preview">${escapeHtml(rec.key)}</span>
+                                  </div>
+                                `).join('')}
+                              </div>
 
-                            <div class="viz-log-markers">
-                              <span>HW: <strong>${part.hw}</strong></span>
-                              <span>LEO: <strong>${part.leo}</strong></span>
+                              <div class="viz-log-markers">
+                                <span>HW: <strong style="color: #10b981;">${part.hw}</strong></span>
+                                <span>LEO: <strong style="color: #6366f1;">${part.leo}</strong></span>
+                              </div>
                             </div>
                           </div>
                         `;
@@ -684,7 +906,7 @@
                     });
 
                     return `
-                      <div class="viz-consumer-item ${c.online ? '' : 'crashed'}">
+                      <div class="viz-consumer-item ${c.online ? '' : 'crashed'}" id="consumer-${c.id}">
                         <div class="viz-consumer-head">
                           <span style="font-weight: 700; font-size: 0.88rem;">👤 ${c.id}</span>
                           <div style="display: flex; gap: 0.35rem; align-items: center;">
@@ -709,7 +931,7 @@
                             Lag: ${consumerLag} msgs
                           </span>
                           <button class="viz-btn success" style="padding: 0.2rem 0.6rem; font-size: 0.75rem;" onclick="KafkaViz.pollConsumer('${group.id}', '${c.id}')" ${!c.online || c.assigned.length === 0 ? 'disabled' : ''}>
-                            📥 ${isVi ? 'Đọc (Poll)' : 'Poll / Commit'}
+                            📥 ${isVi ? 'Đọc (Animate Poll)' : 'Poll (Animate)'}
                           </button>
                         </div>
                       </div>
@@ -739,10 +961,15 @@
       `;
 
       this.bindDynamicEvents();
+      setTimeout(() => this.drawConnectionCurves(), 100);
     },
 
     bindEvents() {
-      // Base global bindings
+      window.addEventListener('resize', () => {
+        if (document.getElementById('vizSvgLayer')) {
+          this.drawConnectionCurves();
+        }
+      });
     },
 
     bindDynamicEvents() {
