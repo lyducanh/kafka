@@ -130,8 +130,7 @@
       confirmUnansweredSubmit: (unanswered) => `You have ${unanswered} unanswered question(s). Are you sure you want to finish and submit the exam?`,
       confirmResetProgress: 'Are you sure you want to reset all your answers, checked questions, and flagged bookmarks?',
       resetSuccessAlert: 'All practice progress has been reset.',
-      savedToDiskToast: 'Saved to questions.json on disk! 💾',
-      savedToBrowserToast: 'Saved in browser. (Run server.py or click 📥 to export to file).',
+      savedToBrowserToast: 'Saved in localStorage! 💾',
       revertPrompt: 'Revert this question back to the original question bank answer and explanation?',
       blogHeroBadge: '📚 Technical Articles & Exam Guides',
       blogHeroTitle: 'Apache Kafka & CCDAK Deep-Dive Articles',
@@ -261,8 +260,7 @@
       confirmUnansweredSubmit: (unanswered) => `Bạn còn ${unanswered} câu hỏi chưa trả lời. Bạn có chắc chắn muốn kết thúc và nộp bài thi?`,
       confirmResetProgress: 'Bạn có chắc chắn muốn đặt lại tất cả câu trả lời, trạng thái đã kiểm tra và câu hỏi đã đánh dấu không?',
       resetSuccessAlert: 'Tất cả tiến độ luyện tập đã được đặt lại.',
-      savedToDiskToast: 'Đã lưu vào file questions.json trên đĩa! 💾',
-      savedToBrowserToast: 'Đã lưu trong trình duyệt. (Chạy server.py hoặc bấm 📥 để xuất file).',
+      savedToBrowserToast: 'Đã lưu thay đổi vào localStorage của trình duyệt! 💾',
       revertPrompt: 'Khôi phục câu hỏi này về đáp án và giải thích ban đầu của ngân hàng đề thi?',
       blogHeroBadge: '📚 Bài Viết Kỹ Thuật & Hướng Dẫn Luyện Thi',
       blogHeroTitle: 'Chuyên Mục Kiến Thức & Bài Viết Chuyên Sâu',
@@ -2483,49 +2481,6 @@
     }, 4000);
   }
 
-  // Persist edits directly to questions.json on disk via server.py (local environment only)
-  async function persistQuestionToDisk(q) {
-    // If running in purely static hosting (e.g. GitHub Pages or file protocol), skip server API request
-    if (
-      window.location.protocol === 'file:' ||
-      (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1')
-    ) {
-      return false;
-    }
-
-    const payload = {
-      id: q.id,
-      answers: q.answers,
-      explanation: q.explanation,
-      personalNotes: q.personalNotes || q.customNotes || ''
-    };
-
-    const endpoints = [
-      '/api/save-question',
-      'http://localhost:3000/api/save-question'
-    ];
-
-    let success = false;
-    for (const url of endpoints) {
-      try {
-        const resp = await fetch(url, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload)
-        });
-        if (resp.ok) {
-          const res = await resp.json();
-          console.log('[Disk Sync]', res.message);
-          success = true;
-          break;
-        }
-      } catch (err) {
-        // Fallback to next endpoint
-      }
-    }
-    return success;
-  }
-
   function saveQuestionEdits() {
     const q = getCurrentQuestion();
     if (!q) return;
@@ -2579,15 +2534,7 @@
     renderQuestion();
     renderQuestionGrid();
     updateTopStats();
-
-    // Sync to disk
-    persistQuestionToDisk(q).then((persisted) => {
-      if (persisted) {
-        showToast(t('savedToDiskToast'));
-      } else {
-        showToast(t('savedToBrowserToast'));
-      }
-    });
+    showToast(t('savedToBrowserToast'));
   }
 
   function restoreOriginalQuestion() {
