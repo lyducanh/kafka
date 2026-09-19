@@ -15,7 +15,6 @@
   </script>
 
   <link rel="stylesheet" href="styles.css" />
-  <link rel="stylesheet" href="visualizer.css" />
   <link rel="icon" type="image/svg+xml" href="kafka-logo.svg" />
 </head>
 <body>
@@ -534,8 +533,15 @@
       </div>
     </section>
 
-    <!-- Visualizer Container -->
-    <section class="visualizer-container-section" id="visualizerContainer" style="display: none;"></section>
+    <!-- Kafka Visualizer Container (Powered by kafka-vis) -->
+    <section class="visualizer-container-section" id="visualizerContainer" style="display: none;">
+      <iframe
+        id="kafkaVisFrame"
+        class="visualizer-iframe"
+        src="kafka-vis/index.html"
+        title="Apache Kafka Interactive Simulation"
+      ></iframe>
+    </section>
   </main>
 
   <!-- Markdown Editor & Preview / Import Modal -->
@@ -644,7 +650,6 @@
   <script src="anime.min.js"></script>
   <script src="questions-data.js"></script>
   <script src="blogs-data.js"></script>
-  <script src="visualizer.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

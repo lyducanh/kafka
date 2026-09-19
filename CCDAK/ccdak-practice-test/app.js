@@ -955,7 +955,7 @@
     if (state.mode === 'blog') {
       renderBlogListView();
     } else if (state.mode === 'visualizer') {
-      if (window.KafkaViz) window.KafkaViz.render();
+      // Kafka visualizer is self-contained in iframe
     } else {
       renderQuestion();
       updateTopStats();
@@ -2328,9 +2328,6 @@
       if (visualizerContainer) {
         visualizerContainer.style.display = 'block';
       }
-      if (window.KafkaViz) {
-        window.KafkaViz.render();
-      }
     } else {
       if (questionCard) questionCard.style.display = 'block';
       if (sidebar) sidebar.style.display = 'block';
@@ -3008,9 +3005,6 @@
     populateCategories();
     setupEventListeners();
     applyFilters();
-    if (window.KafkaViz) {
-      window.KafkaViz.init();
-    }
   }
 
   // Run on DOM ready

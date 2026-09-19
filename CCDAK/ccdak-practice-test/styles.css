@@ -1264,16 +1264,31 @@ header {
 /* ==========================================================
    BLOG & ARTICLES SYSTEM
    ========================================================== */
-.blog-container,
+.blog-container {
+  grid-column: 1 / -1;
+  width: 100%;
+  max-width: 1100px;
+  margin: 0 auto;
+  animation: fadeIn 0.3s ease-out;
+}
+
+/* ==========================================================
+   KAFKA VISUALIZATION SYSTEM (Powered by kafka-vis)
+   ========================================================== */
 .visualizer-container-section {
   grid-column: 1 / -1;
   width: 100%;
   animation: fadeIn 0.3s ease-out;
 }
 
-.blog-container {
-  max-width: 1100px;
-  margin: 0 auto;
+.visualizer-iframe {
+  width: 100%;
+  height: calc(100vh - 120px);
+  min-height: 860px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius);
+  background: #111827;
+  display: block;
 }
 
 .blog-hero {
