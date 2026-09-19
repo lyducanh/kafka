@@ -106,6 +106,25 @@
 
     <!-- Main Question Area -->
     <section class="main-question-card" id="questionCard">
+      <!-- Active Exam Review Banner (Shown when reviewing a submitted or past exam) -->
+      <div id="examReviewBanner" class="exam-review-banner" style="display: none;">
+        <div class="exam-review-info">
+          <span class="exam-review-icon">📜</span>
+          <div class="exam-review-text">
+            <strong id="examReviewBannerTitle">Reviewing Exam Attempt</strong>
+            <span id="examReviewBannerMeta">Score: 0/60 (0%) · Date</span>
+          </div>
+        </div>
+        <div class="exam-review-actions">
+          <button id="viewScorecardBtn" class="btn btn-secondary btn-sm" title="View score summary">
+            📊 <span id="viewScorecardLabel">Scorecard</span>
+          </button>
+          <button id="exitReviewBtn" class="btn btn-secondary btn-sm" title="Return to exam setup and history">
+            ← <span id="exitReviewLabel">Exit Review</span>
+          </button>
+        </div>
+      </div>
+
       <!-- Question Meta Header -->
       <div class="question-header">
         <div class="question-meta">
@@ -324,6 +343,39 @@
                 🚀 Start Timed Exam Now
               </button>
             </div>
+
+            <!-- Exam History & Saved Attempts Section -->
+            <div id="examHistorySection" class="exam-history-section">
+              <div class="exam-history-header">
+                <div class="exam-history-title-group">
+                  <h3 id="examHistoryTitle" class="exam-history-title">📜 Exam History & Passed Attempts</h3>
+                  <p id="examHistorySubtitle" class="exam-history-subtitle">
+                    Review your completed exams, track your progress over time, and revisit every question and solution.
+                  </p>
+                </div>
+                <div class="exam-history-header-actions">
+                  <div class="exam-history-tabs" role="tablist">
+                    <button class="hist-tab-btn active" id="histTabAll" data-hist-filter="all">
+                      All Attempts (<span id="histCountAll">0</span>)
+                    </button>
+                    <button class="hist-tab-btn" id="histTabPassed" data-hist-filter="passed">
+                      🏆 Passed (<span id="histCountPassed">0</span>)
+                    </button>
+                  </div>
+                  <div class="exam-history-extra-actions">
+                    <button id="exportHistoryBtn" class="btn btn-secondary btn-sm" title="Export all completed exam records to JSON">
+                      📥 <span id="exportHistLabel">Export History</span>
+                    </button>
+                    <button id="clearHistoryBtn" class="btn btn-secondary btn-sm" title="Clear all exam history records">
+                      🗑️ <span id="clearHistLabel">Clear History</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <!-- History Records List -->
+              <div id="examHistoryList" class="exam-history-list"></div>
+            </div>
           </div>
         </div>
 
@@ -534,12 +586,16 @@
       </div>
 
       <div style="border-top: 1px solid var(--border-color); padding-top: 1rem;">
+        <div id="examSavedNotice" class="exam-saved-notice" style="display: flex; align-items: center; gap: 0.5rem; justify-content: center; font-size: 0.85rem; color: var(--success); margin-bottom: 0.75rem; background: var(--success-bg); padding: 0.5rem 0.75rem; border-radius: 6px; border: 1px solid var(--success-border);">
+          <span>💾</span> <span id="examSavedNoticeText">Exam result automatically saved to your Exam History.</span>
+        </div>
         <h3 id="topicBreakdownTitle" style="font-size: 1rem; margin-bottom: 0.75rem;">Topic Breakdown</h3>
         <div id="categoryBreakdown" class="category-breakdown"></div>
       </div>
 
-      <div class="modal-actions">
+      <div class="modal-actions" style="flex-wrap: wrap; gap: 0.5rem;">
         <button id="reviewExamBtn" class="btn btn-primary">Review Questions</button>
+        <button id="viewHistoryModalBtn" class="btn btn-secondary">📜 <span id="viewHistModalLabel">Exam History</span></button>
         <button id="retakeExamBtn" class="btn btn-secondary">Retake New Exam</button>
         <button id="backToPracticeBtn" class="btn btn-secondary">Exit to Practice Mode</button>
       </div>

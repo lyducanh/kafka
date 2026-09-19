@@ -1782,3 +1782,279 @@ header {
     align-items: flex-start;
   }
 }
+
+/* ==========================================================
+   EXAM REVIEW BANNER (Sticky top bar during review)
+   ========================================================== */
+.exam-review-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.15), rgba(16, 185, 129, 0.15));
+  border: 1px solid var(--primary);
+  border-radius: var(--radius);
+  padding: 0.75rem 1.25rem;
+  margin-bottom: 1rem;
+}
+
+.exam-review-info {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.exam-review-icon {
+  font-size: 1.5rem;
+  line-height: 1;
+}
+
+.exam-review-text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.exam-review-text strong {
+  font-size: 0.95rem;
+  color: var(--text-primary);
+}
+
+.exam-review-text span {
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+}
+
+.exam-review-actions {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.btn-sm {
+  padding: 0.4rem 0.75rem !important;
+  font-size: 0.82rem !important;
+  border-radius: 6px !important;
+}
+
+/* ==========================================================
+   EXAM HISTORY & SAVED ATTEMPTS SECTION
+   ========================================================== */
+.exam-history-section {
+  width: 100%;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius);
+  padding: 1.5rem;
+  margin-top: 2rem;
+  text-align: left;
+}
+
+.exam-history-header {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.exam-history-title-group h3 {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 0.25rem;
+}
+
+.exam-history-subtitle {
+  font-size: 0.88rem;
+  color: var(--text-secondary);
+  line-height: 1.4;
+}
+
+.exam-history-header-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.exam-history-tabs {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.hist-tab-btn {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  color: var(--text-secondary);
+  padding: 0.45rem 0.9rem;
+  border-radius: 999px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.hist-tab-btn:hover {
+  border-color: var(--primary);
+  color: var(--text-primary);
+}
+
+.hist-tab-btn.active {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: #ffffff;
+}
+
+.exam-history-extra-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+/* Exam History Cards */
+.exam-history-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.history-card {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  padding: 1.25rem;
+  transition: var(--transition);
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.history-card:hover {
+  border-color: var(--primary);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
+  transform: translateY(-1px);
+}
+
+.history-card.passed-attempt {
+  border-left: 4px solid var(--success);
+}
+
+.history-card.failed-attempt {
+  border-left: 4px solid var(--danger);
+}
+
+.history-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.history-header-left {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.history-status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.3rem 0.75rem;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.history-status-badge.passed {
+  background: var(--success-bg);
+  color: var(--success);
+  border: 1px solid var(--success-border);
+}
+
+.history-status-badge.failed {
+  background: var(--danger-bg);
+  color: var(--danger);
+  border: 1px solid var(--danger-border);
+}
+
+.history-score-tag {
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: var(--text-primary);
+}
+
+.history-meta-text {
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.history-domain-breakdown {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.history-domain-chip {
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
+  padding: 0.2rem 0.5rem;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.history-domain-chip strong {
+  color: var(--text-primary);
+}
+
+.history-domain-chip .chip-score.good {
+  color: var(--success);
+  font-weight: 700;
+}
+
+.history-domain-chip .chip-score.poor {
+  color: var(--danger);
+  font-weight: 700;
+}
+
+.history-card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.6rem;
+  padding-top: 0.6rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.history-empty-state {
+  text-align: center;
+  padding: 2.5rem 1rem;
+  color: var(--text-secondary);
+}
+
+.history-empty-icon {
+  font-size: 2.5rem;
+  margin-bottom: 0.5rem;
+  opacity: 0.7;
+}
+
+.history-empty-state p {
+  font-size: 0.95rem;
+  max-width: 450px;
+  margin: 0 auto;
+  line-height: 1.5;
+}
+

@@ -144,7 +144,27 @@
       orDragText: 'or drag & drop here to render',
       renderAsArticleLabel: 'View as Full Article',
       closeMdLabel: 'Close',
-      copiedLinkToast: 'Article link copied to clipboard! 🔗'
+      copiedLinkToast: 'Article link copied to clipboard! 🔗',
+      examHistoryTitle: '📜 Exam History & Passed Attempts',
+      examHistorySubtitle: 'Review your completed exams, track your progress over time, and revisit every question and solution.',
+      histTabAll: 'All Attempts',
+      histTabPassed: '🏆 Passed Only',
+      exportHistLabel: 'Export History',
+      clearHistLabel: 'Clear History',
+      reviewThisExamBtn: '🔍 Review Questions',
+      viewScorecardBtn: '📊 Scorecard',
+      deleteHistBtn: '🗑️ Delete',
+      confirmDeleteAttempt: 'Delete this exam attempt from history?',
+      confirmClearHistory: 'Are you sure you want to clear all exam history records?',
+      historyClearedAlert: 'All exam history records have been cleared.',
+      emptyHistoryAll: 'No completed exams yet. Start and submit a timed exam above to record your simulation attempts!',
+      emptyHistoryPassed: 'No passed exams yet. Keep practicing and aim for ≥75% (45/60 correct)!',
+      reviewingExamBannerTitle: 'Reviewing Exam Attempt',
+      exitReviewLabel: 'Exit Review',
+      examSavedNoticeText: 'Exam result automatically saved to your Exam History.',
+      viewHistModalLabel: 'Exam History',
+      timeSpentText: (mins, secs) => `${mins}m ${secs}s`,
+      attemptMetaText: (date, score, total, pct, duration) => `${date} · Time: ${duration} · Score: ${score}/${total} (${pct}%)`
     },
     vi: {
       langBtn: '🇬🇧 English',
@@ -255,7 +275,27 @@
       orDragText: 'hoặc kéo thả file vào đây để xem',
       renderAsArticleLabel: 'Xem Dưới Dạng Bài Viết',
       closeMdLabel: 'Đóng',
-      copiedLinkToast: 'Đã sao chép liên kết bài viết! 🔗'
+      copiedLinkToast: 'Đã sao chép liên kết bài viết! 🔗',
+      examHistoryTitle: '📜 Lịch Sử Thi & Bài Thi Đã Đạt',
+      examHistorySubtitle: 'Xem lại các bài thi đã làm, theo dõi tiến độ và kiểm tra lại toàn bộ câu hỏi kèm lời giải chi tiết.',
+      histTabAll: 'Tất cả bài thi',
+      histTabPassed: '🏆 Đã Đạt (≥75%)',
+      exportHistLabel: 'Xuất Lịch Sử JSON',
+      clearHistLabel: 'Xóa Lịch Sử',
+      reviewThisExamBtn: '🔍 Xem Lại Bài Thi',
+      viewScorecardBtn: '📊 Bảng Điểm',
+      deleteHistBtn: '🗑️ Xóa',
+      confirmDeleteAttempt: 'Bạn có chắc chắn muốn xóa kết quả bài thi này khỏi lịch sử không?',
+      confirmClearHistory: 'Bạn có chắc chắn muốn xóa toàn bộ lịch sử thi không?',
+      historyClearedAlert: 'Toàn bộ lịch sử thi đã được xóa.',
+      emptyHistoryAll: 'Chưa có bài thi nào được hoàn thành. Hãy bắt đầu làm bài thi tính giờ ở trên để lưu lịch sử!',
+      emptyHistoryPassed: 'Chưa có bài thi nào đạt ≥75%. Hãy tiếp tục luyện tập và chinh phục bài thi!',
+      reviewingExamBannerTitle: 'Đang Xem Lại Bài Thi',
+      exitReviewLabel: 'Thoát Xem Lại',
+      examSavedNoticeText: 'Kết quả bài thi đã được tự động lưu vào Lịch Sử Thi của bạn.',
+      viewHistModalLabel: 'Xem Lịch Sử Thi',
+      timeSpentText: (mins, secs) => `${mins} phút ${secs} giây`,
+      attemptMetaText: (date, score, total, pct, duration) => `${date} · Thời gian: ${duration} · Điểm: ${score}/${total} (${pct}%)`
     }
   };
 
@@ -288,11 +328,16 @@
     checkedQuestions: {}, // { [questionId]: boolean } (in practice mode)
     flaggedQuestions: {}, // { [questionId]: boolean }
 
+    // Exam History & Past Attempts (Persisted in localStorage)
+    examHistory: [], // Array of completed exam records
+    examHistoryFilter: 'all', // 'all' | 'passed'
+
     // Exam Mode State
     exam: {
       active: false,
       submitted: false,
       isReviewing: false,
+      reviewingAttempt: null, // Full attempt object when reviewing history
       questions: [], // 60 randomly chosen questions
       answers: {},
       totalTimeSeconds: 90 * 60, // 90 minutes Confluent standard
@@ -311,6 +356,7 @@
 
   const STORAGE_KEY = 'ccdak_interactive_test_v1';
   const OVERRIDES_KEY = 'ccdak_custom_overrides_v1';
+  const EXAM_HISTORY_KEY = 'ccdak_exam_history_v1';
 
   // DOM Elements
   const els = {
@@ -335,6 +381,29 @@
     statFlagged: document.getElementById('statFlagged'),
     timerBadge: document.getElementById('timerBadge'),
     timerDisplay: document.getElementById('timerDisplay'),
+
+    // Review Banner Elements
+    examReviewBanner: document.getElementById('examReviewBanner'),
+    examReviewBannerTitle: document.getElementById('examReviewBannerTitle'),
+    examReviewBannerMeta: document.getElementById('examReviewBannerMeta'),
+    viewScorecardBtn: document.getElementById('viewScorecardBtn'),
+    viewScorecardLabel: document.getElementById('viewScorecardLabel'),
+    exitReviewBtn: document.getElementById('exitReviewBtn'),
+    exitReviewLabel: document.getElementById('exitReviewLabel'),
+
+    // Exam History Elements
+    examHistorySection: document.getElementById('examHistorySection'),
+    examHistoryTitle: document.getElementById('examHistoryTitle'),
+    examHistorySubtitle: document.getElementById('examHistorySubtitle'),
+    examHistoryList: document.getElementById('examHistoryList'),
+    histTabAll: document.getElementById('histTabAll'),
+    histTabPassed: document.getElementById('histTabPassed'),
+    histCountAll: document.getElementById('histCountAll'),
+    histCountPassed: document.getElementById('histCountPassed'),
+    exportHistoryBtn: document.getElementById('exportHistoryBtn'),
+    exportHistLabel: document.getElementById('exportHistLabel'),
+    clearHistoryBtn: document.getElementById('clearHistoryBtn'),
+    clearHistLabel: document.getElementById('clearHistLabel'),
 
     // Question Views
     questionCard: document.getElementById('questionCard'),
@@ -429,6 +498,9 @@
     examSummaryText: document.getElementById('examSummaryText'),
     categoryBreakdown: document.getElementById('categoryBreakdown'),
     reviewExamBtn: document.getElementById('reviewExamBtn'),
+    viewHistoryModalBtn: document.getElementById('viewHistoryModalBtn'),
+    viewHistModalLabel: document.getElementById('viewHistModalLabel'),
+    examSavedNoticeText: document.getElementById('examSavedNoticeText'),
     retakeExamBtn: document.getElementById('retakeExamBtn'),
     backToPracticeBtn: document.getElementById('backToPracticeBtn'),
 
@@ -619,6 +691,13 @@
         state.customOverrides = JSON.parse(savedOverrides) || {};
         applyCustomOverrides();
       }
+
+      // Load exam history attempts
+      const savedHistory = localStorage.getItem(EXAM_HISTORY_KEY);
+      if (savedHistory) {
+        state.examHistory = JSON.parse(savedHistory) || [];
+      }
+      renderExamHistory();
     } catch (err) {
       console.warn('Could not load saved state:', err);
     }
@@ -651,6 +730,14 @@
       localStorage.setItem(OVERRIDES_KEY, JSON.stringify(state.customOverrides));
     } catch (err) {
       console.warn('Could not save overrides:', err);
+    }
+  }
+
+  function saveExamHistory() {
+    try {
+      localStorage.setItem(EXAM_HISTORY_KEY, JSON.stringify(state.examHistory));
+    } catch (err) {
+      console.warn('Could not save exam history:', err);
     }
   }
 
@@ -804,8 +891,20 @@
     const topicBreakdownTitle = document.getElementById('topicBreakdownTitle');
     if (topicBreakdownTitle) topicBreakdownTitle.textContent = t('topicBreakdownTitle');
     if (els.reviewExamBtn) els.reviewExamBtn.textContent = t('reviewExamBtn');
+    if (els.viewHistModalLabel) els.viewHistModalLabel.textContent = t('viewHistModalLabel');
+    if (els.examSavedNoticeText) els.examSavedNoticeText.textContent = t('examSavedNoticeText');
     if (els.retakeExamBtn) els.retakeExamBtn.textContent = t('retakeExamBtn');
     if (els.backToPracticeBtn) els.backToPracticeBtn.textContent = t('backToPracticeBtn');
+
+    // Review Banner & Exam History Labels
+    if (els.examReviewBannerTitle) els.examReviewBannerTitle.textContent = t('reviewingExamBannerTitle');
+    if (els.viewScorecardLabel) els.viewScorecardLabel.textContent = t('viewScorecardBtn');
+    if (els.exitReviewLabel) els.exitReviewLabel.textContent = t('exitReviewLabel');
+    if (els.examHistoryTitle) els.examHistoryTitle.textContent = t('examHistoryTitle');
+    if (els.examHistorySubtitle) els.examHistorySubtitle.textContent = t('examHistorySubtitle');
+    if (els.exportHistLabel) els.exportHistLabel.textContent = t('exportHistLabel');
+    if (els.clearHistLabel) els.clearHistLabel.textContent = t('clearHistLabel');
+    renderExamHistory();
 
     if (els.editModalTitle) els.editModalTitle.textContent = t('editModalTitle');
     const formLabelQuestion = document.getElementById('formLabelQuestion');
@@ -1592,11 +1691,56 @@
     const total = state.exam.questions.length;
     const percentage = Math.round((correct / total) * 100);
     const passed = percentage >= 75; // CCDAK standard passing mark is 75%
+    const timeSpentSec = state.exam.totalTimeSeconds - Math.max(0, state.exam.remainingSeconds);
 
     state.exam.score = correct;
     state.exam.percentage = percentage;
     state.exam.passed = passed;
     state.exam.categoryStats = catStats;
+
+    // Create & Store Attempt Record in History (Persistent)
+    const attemptRecord = {
+      id: 'exam_' + Date.now(),
+      timestamp: Date.now(),
+      dateFormatted: new Date().toLocaleString(state.lang === 'vi' ? 'vi-VN' : 'en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      }),
+      score: correct,
+      total: total,
+      percentage: percentage,
+      passed: passed,
+      timeSpentSeconds: timeSpentSec,
+      categoryStats: { ...catStats },
+      questions: state.exam.questions.map((q) => ({
+        id: q.id,
+        category: q.category,
+        subcategory: q.subcategory,
+        questionNumber: q.questionNumber,
+        question: q.question,
+        question_vi: q.question_vi,
+        options: q.options,
+        answers: [...q.answers],
+        explanation: q.explanation,
+        explanation_vi: q.explanation_vi,
+        personalNotes: q.personalNotes || '',
+        customNotes: q.customNotes || '',
+        isCustom: !!q.isCustom,
+        isMultiSelect: !!q.isMultiSelect
+      })),
+      answers: { ...state.exam.answers }
+    };
+
+    state.exam.reviewingAttempt = attemptRecord;
+    state.examHistory.unshift(attemptRecord);
+    if (state.examHistory.length > 50) {
+      state.examHistory.pop();
+    }
+    saveExamHistory();
+    renderExamHistory();
 
     trackAnalyticsEvent('complete_quiz', {
       quiz_name: 'CCDAK Timed Exam',
@@ -1624,11 +1768,11 @@
       ? 'var(--success-bg)'
       : 'var(--danger-bg)';
 
-    els.examSummaryText.textContent = t('examSummary', score, questions.length);
+    els.examSummaryText.textContent = t('examSummary', score, questions ? questions.length : 60);
 
     // Render Category Breakdown
     els.categoryBreakdown.innerHTML = '';
-    Object.keys(categoryStats)
+    Object.keys(categoryStats || {})
       .sort()
       .forEach((cat) => {
         const item = categoryStats[cat];
@@ -1693,9 +1837,245 @@
     els.resultsModal.style.display = 'none';
     state.exam.isReviewing = true;
     state.currentIndex = 0;
+    updateReviewBanner(state.exam.reviewingAttempt || state.exam);
     renderQuestion();
     renderQuestionGrid();
     updateTopStats();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  /* ==========================================================
+     EXAM HISTORY & ATTEMPTS REVIEW
+     ========================================================== */
+  function renderExamHistory() {
+    if (!els.examHistoryList) return;
+
+    const totalAttempts = state.examHistory.length;
+    const passedAttempts = state.examHistory.filter((a) => a.passed).length;
+
+    if (els.histCountAll) els.histCountAll.textContent = totalAttempts;
+    if (els.histCountPassed) els.histCountPassed.textContent = passedAttempts;
+
+    if (els.histTabAll) {
+      els.histTabAll.classList.toggle('active', state.examHistoryFilter === 'all');
+      els.histTabAll.innerHTML = `${t('histTabAll')} (<span id="histCountAll">${totalAttempts}</span>)`;
+    }
+    if (els.histTabPassed) {
+      els.histTabPassed.classList.toggle('active', state.examHistoryFilter === 'passed');
+      els.histTabPassed.innerHTML = `${t('histTabPassed')} (<span id="histCountPassed">${passedAttempts}</span>)`;
+    }
+
+    const filtered = state.examHistory.filter((attempt) => {
+      if (state.examHistoryFilter === 'passed') return attempt.passed;
+      return true;
+    });
+
+    els.examHistoryList.innerHTML = '';
+
+    if (filtered.length === 0) {
+      const emptyDiv = document.createElement('div');
+      emptyDiv.className = 'history-empty-state';
+      emptyDiv.innerHTML = `
+        <div class="history-empty-icon">${state.examHistoryFilter === 'passed' ? '🎯' : '📝'}</div>
+        <p>${state.examHistoryFilter === 'passed' ? t('emptyHistoryPassed') : t('emptyHistoryAll')}</p>
+      `;
+      els.examHistoryList.appendChild(emptyDiv);
+      return;
+    }
+
+    filtered.forEach((attempt) => {
+      const card = document.createElement('div');
+      card.className = `history-card ${attempt.passed ? 'passed-attempt' : 'failed-attempt'}`;
+
+      const minutes = Math.floor((attempt.timeSpentSeconds || 0) / 60);
+      const seconds = (attempt.timeSpentSeconds || 0) % 60;
+      const durationStr = t('timeSpentText', minutes, seconds);
+
+      // Card Header
+      const header = document.createElement('div');
+      header.className = 'history-card-header';
+
+      const headerLeft = document.createElement('div');
+      headerLeft.className = 'history-header-left';
+
+      const statusBadge = document.createElement('span');
+      statusBadge.className = `history-status-badge ${attempt.passed ? 'passed' : 'failed'}`;
+      statusBadge.innerHTML = attempt.passed ? '🏆 ' + t('passedBadge') : '✗ ' + t('failedBadge');
+
+      const scoreTag = document.createElement('span');
+      scoreTag.className = 'history-score-tag';
+      scoreTag.textContent = `${attempt.score} / ${attempt.total || 60} (${attempt.percentage}%)`;
+
+      headerLeft.appendChild(statusBadge);
+      headerLeft.appendChild(scoreTag);
+
+      const metaText = document.createElement('div');
+      metaText.className = 'history-meta-text';
+      metaText.innerHTML = `
+        <span>📅 ${attempt.dateFormatted || new Date(attempt.timestamp).toLocaleDateString()}</span>
+        <span>⏱️ ${durationStr}</span>
+      `;
+
+      header.appendChild(headerLeft);
+      header.appendChild(metaText);
+      card.appendChild(header);
+
+      // Category breakdown chips
+      if (attempt.categoryStats && Object.keys(attempt.categoryStats).length > 0) {
+        const domainSection = document.createElement('div');
+        domainSection.className = 'history-domain-breakdown';
+
+        Object.keys(attempt.categoryStats).sort().forEach((cat) => {
+          const item = attempt.categoryStats[cat];
+          const catPct = Math.round((item.correct / item.total) * 100);
+          const chip = document.createElement('span');
+          chip.className = 'history-domain-chip';
+          chip.innerHTML = `
+            <span>${cat}:</span>
+            <span class="chip-score ${catPct >= 75 ? 'good' : 'poor'}">${item.correct}/${item.total} (${catPct}%)</span>
+          `;
+          domainSection.appendChild(chip);
+        });
+        card.appendChild(domainSection);
+      }
+
+      // Card Footer Actions
+      const footer = document.createElement('div');
+      footer.className = 'history-card-footer';
+
+      const reviewBtn = document.createElement('button');
+      reviewBtn.className = 'btn btn-primary btn-sm';
+      reviewBtn.innerHTML = t('reviewThisExamBtn');
+      reviewBtn.addEventListener('click', () => loadExamForReview(attempt));
+
+      const scorecardBtn = document.createElement('button');
+      scorecardBtn.className = 'btn btn-secondary btn-sm';
+      scorecardBtn.innerHTML = t('viewScorecardBtn');
+      scorecardBtn.addEventListener('click', () => displayResultsModalForAttempt(attempt));
+
+      const deleteBtn = document.createElement('button');
+      deleteBtn.className = 'btn btn-secondary btn-sm';
+      deleteBtn.innerHTML = t('deleteHistBtn');
+      deleteBtn.title = 'Delete attempt';
+      deleteBtn.addEventListener('click', () => deleteExamAttempt(attempt.id));
+
+      footer.appendChild(reviewBtn);
+      footer.appendChild(scorecardBtn);
+      footer.appendChild(deleteBtn);
+      card.appendChild(footer);
+
+      els.examHistoryList.appendChild(card);
+    });
+  }
+
+  function loadExamForReview(attempt) {
+    if (!attempt || !attempt.questions || !attempt.questions.length) return;
+
+    state.exam.questions = attempt.questions;
+    state.exam.answers = attempt.answers || {};
+    state.exam.score = attempt.score;
+    state.exam.percentage = attempt.percentage;
+    state.exam.passed = attempt.passed;
+    state.exam.categoryStats = attempt.categoryStats || {};
+    state.exam.active = false;
+    state.exam.submitted = true;
+    state.exam.isReviewing = true;
+    state.exam.reviewingAttempt = attempt;
+    state.currentIndex = 0;
+
+    // Switch view to questions
+    if (els.examIntroView) els.examIntroView.style.display = 'none';
+    if (els.questionView) els.questionView.style.display = 'block';
+    if (els.questionFooter) els.questionFooter.style.display = 'flex';
+    if (els.timerBadge) els.timerBadge.style.display = 'none';
+    if (els.examSubmitBox) els.examSubmitBox.style.display = 'none';
+
+    updateReviewBanner(attempt);
+    renderQuestion();
+    renderQuestionGrid();
+    updateTopStats();
+
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  function updateReviewBanner(attempt) {
+    if (!els.examReviewBanner) return;
+    if (state.exam.isReviewing) {
+      els.examReviewBanner.style.display = 'flex';
+      if (els.examReviewBannerTitle) {
+        els.examReviewBannerTitle.textContent = t('reviewingExamBannerTitle');
+      }
+      if (els.examReviewBannerMeta) {
+        const att = attempt || state.exam.reviewingAttempt || state.exam;
+        const minutes = Math.floor((att.timeSpentSeconds || 0) / 60);
+        const seconds = (att.timeSpentSeconds || 0) % 60;
+        const durStr = t('timeSpentText', minutes, seconds);
+        const passText = att.passed
+          ? (state.lang === 'vi' ? 'ĐẠT' : 'PASSED')
+          : (state.lang === 'vi' ? 'CHƯA ĐẠT' : 'DID NOT PASS');
+        els.examReviewBannerMeta.textContent = `${att.dateFormatted || ''} · ${att.score}/${att.total || 60} (${att.percentage}%) · ${passText} · ${durStr}`;
+      }
+    } else {
+      els.examReviewBanner.style.display = 'none';
+    }
+  }
+
+  function exitReviewMode() {
+    state.exam.active = false;
+    state.exam.submitted = false;
+    state.exam.isReviewing = false;
+    state.exam.reviewingAttempt = null;
+    if (els.examReviewBanner) els.examReviewBanner.style.display = 'none';
+
+    renderQuestion();
+    renderQuestionGrid();
+    updateTopStats();
+    renderExamHistory();
+  }
+
+  function deleteExamAttempt(attemptId) {
+    const confirmed = confirm(t('confirmDeleteAttempt'));
+    if (!confirmed) return;
+    state.examHistory = state.examHistory.filter((a) => a.id !== attemptId);
+    saveExamHistory();
+    renderExamHistory();
+  }
+
+  function clearAllExamHistory() {
+    const confirmed = confirm(t('confirmClearHistory'));
+    if (!confirmed) return;
+    state.examHistory = [];
+    saveExamHistory();
+    renderExamHistory();
+    alert(t('historyClearedAlert'));
+  }
+
+  function exportExamHistoryJson() {
+    if (!state.examHistory || state.examHistory.length === 0) {
+      alert(state.lang === 'vi' ? 'Chưa có lịch sử bài thi nào để xuất ra file.' : 'No exam history available to export.');
+      return;
+    }
+    const dataStr =
+      'data:text/json;charset=utf-8,' +
+      encodeURIComponent(JSON.stringify(state.examHistory, null, 2));
+    const downloadAnchor = document.createElement('a');
+    downloadAnchor.setAttribute('href', dataStr);
+    downloadAnchor.setAttribute('download', 'ccdak_exam_history.json');
+    document.body.appendChild(downloadAnchor);
+    downloadAnchor.click();
+    downloadAnchor.remove();
+  }
+
+  function displayResultsModalForAttempt(attempt) {
+    if (!attempt) return;
+    state.exam.score = attempt.score;
+    state.exam.percentage = attempt.percentage;
+    state.exam.passed = attempt.passed;
+    state.exam.categoryStats = attempt.categoryStats || {};
+    state.exam.questions = attempt.questions;
+    state.exam.answers = attempt.answers;
+    state.exam.reviewingAttempt = attempt;
+    displayResultsModal();
   }
 
   /* ==========================================================
@@ -1971,6 +2351,7 @@
         renderQuestion();
         renderQuestionGrid();
         updateTopStats();
+        renderExamHistory();
       } else {
         if (els.timerBadge) els.timerBadge.style.display = 'none';
         if (els.examSubmitBox) els.examSubmitBox.style.display = 'none';
@@ -2542,6 +2923,13 @@
     }
     els.submitExamBtn.addEventListener('click', () => submitExam(false));
     els.reviewExamBtn.addEventListener('click', enterReviewMode);
+    if (els.viewHistoryModalBtn) {
+      els.viewHistoryModalBtn.addEventListener('click', () => {
+        els.resultsModal.style.display = 'none';
+        exitReviewMode();
+        switchMode('exam');
+      });
+    }
     els.retakeExamBtn.addEventListener('click', () => {
       els.resultsModal.style.display = 'none';
       startExamMode();
@@ -2550,6 +2938,36 @@
       els.resultsModal.style.display = 'none';
       switchMode('practice');
     });
+
+    // Exam Review Banner Controls
+    if (els.viewScorecardBtn) {
+      els.viewScorecardBtn.addEventListener('click', () => {
+        displayResultsModal();
+      });
+    }
+    if (els.exitReviewBtn) {
+      els.exitReviewBtn.addEventListener('click', exitReviewMode);
+    }
+
+    // Exam History Controls
+    if (els.histTabAll) {
+      els.histTabAll.addEventListener('click', () => {
+        state.examHistoryFilter = 'all';
+        renderExamHistory();
+      });
+    }
+    if (els.histTabPassed) {
+      els.histTabPassed.addEventListener('click', () => {
+        state.examHistoryFilter = 'passed';
+        renderExamHistory();
+      });
+    }
+    if (els.exportHistoryBtn) {
+      els.exportHistoryBtn.addEventListener('click', exportExamHistoryJson);
+    }
+    if (els.clearHistoryBtn) {
+      els.clearHistoryBtn.addEventListener('click', clearAllExamHistory);
+    }
 
     // Keyboard Shortcuts
     document.addEventListener('keydown', (e) => {
