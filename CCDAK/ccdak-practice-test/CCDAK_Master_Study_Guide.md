@@ -159,11 +159,14 @@ In a Kafka cluster, the Controller is a critical component for managing cluster 
 
 In the context of Kafka's distributed architecture, broker elections are vital for cluster health and stability. Consider the following advanced scenarios where Kafka's internal mechanisms must decide on leadership roles:
 
+1. If a broker acting as the Controller goes down, what mechanism is responsible for the election of a new Controller?
+2. A partition leader fails, and all its replicas are on brokers with the same network latency to the Zookeeper ensemble. How is the new leader chosen among the replicas?
+3. During a network partition, a subset of brokers becomes isolated from the main cluster. What determines which brokers will continue to serve as leaders for their partitions?
+
+Which of the following statements correctly answer these scenarios? (Select three)
+
 **Options:**
 
-- **1.** If a broker acting as the Controller goes down, what mechanism is responsible for the election of a new Controller?
-- **2.** A partition leader fails, and all its replicas are on brokers with the same network latency to the Zookeeper ensemble. How is the new leader chosen among the replicas?
-- **3.** During a network partition, a subset of brokers becomes isolated from the main cluster. What determines which brokers will continue to serve as leaders for their partitions?
 - **A.** The Zookeeper ensemble elects the new Controller based on ephemeral node creation sequence.
 - **B.** The new partition leader is elected based on the ISR list order, favoring replicas with the most recent updates.
 - **C.** Brokers in the main cluster segment with access to Zookeeper retain their roles, while isolated brokers step down until connectivity is restored.
@@ -175,19 +178,16 @@ In the context of Kafka's distributed architecture, broker elections are vital f
 
 > **Correct Answer:** `A, B, C`
 >
-> 1. **- A. The Zookeeper ensemble elects the new Controller based on ephemeral node creation sequence.**
->    
->    Explanation: When the broker acting as the Controller fails, Zookeeper plays a crucial role in the election of a new Controller. Kafka brokers register themselves with Zookeeper using ephemeral nodes. When the current Controller's node disappears from Zookeeper (due to failure or disconnection), Zookeeper triggers the Controller re-election process among the live brokers. The new Controller is typically the first broker to respond to this trigger, based on the sequence of ephemeral node creation.
-> 
-> 2. **B. The new partition leader is elected based on the ISR list order, favoring replicas with the most recent updates.**
->    
->    Explanation: Kafka does not use a random process or explicit network latency measurements to select a new leader among replicas. Instead, it relies on the ordered list of in-sync replicas (ISRs) for each partition. The new leader is usually the first replica in the ISR list that is still available. This mechanism ensures that the chosen leader is up-to-date with the latest messages to prevent data loss.
-> 
-> 3. **C. Brokers in the main cluster segment with access to Zookeeper retain their roles, while isolated brokers step down until connectivity is restored.**
->    
->    Explanation: In the event of a network partition that isolates a subset of brokers, the decision on which brokers continue to serve as leaders for their partitions depends on their ability to communicate with Zookeeper. Brokers on the side of the partition that maintains connectivity to Zookeeper continue to function normally, retaining their roles. Meanwhile, isolated brokers lose their leadership status for partitions and step down, becoming followers if they are part of the ISR and can establish leadership once connectivity is restored and they rejoin the cluster. This ensures the cluster remains operational and consistent, prioritizing segments with Zookeeper connectivity.
-> 
-> D and E are incorrect options based on Kafka's current architecture and leader election protocols.
+> • **A. The Zookeeper ensemble elects the new Controller based on ephemeral node creation sequence.**  
+>   Explanation (Scenario 1): When the broker acting as the Controller fails, Zookeeper plays a crucial role in the election of a new Controller. Kafka brokers register themselves with Zookeeper using ephemeral nodes (`/controller`). When the current Controller's node disappears from Zookeeper (due to failure or session timeout), Zookeeper triggers the Controller re-election process among the live brokers. The new Controller is the first broker that successfully creates the ephemeral node.
+>
+> • **B. The new partition leader is elected based on the ISR list order, favoring replicas with the most recent updates.**  
+>   Explanation (Scenario 2): Kafka does not use a random process or explicit network latency measurements to select a new leader among replicas. Instead, the active Controller relies on the ordered list of in-sync replicas (ISRs) for each partition. The new leader is selected as the first available replica in the ISR list.
+>
+> • **C. Brokers in the main cluster segment with access to Zookeeper retain their roles, while isolated brokers step down until connectivity is restored.**  
+>   Explanation (Scenario 3): In the event of a network partition, the decision on which brokers continue to serve as leaders for their partitions depends on their ability to maintain connection to the Zookeeper ensemble (or KRaft quorum). Brokers on the side of the partition that maintains connectivity to Zookeeper continue to function normally, while isolated brokers lose their Zookeeper session and step down.
+>
+> D and E are incorrect options based on Kafka's architecture and leader election protocols.
 
 </details>
 
